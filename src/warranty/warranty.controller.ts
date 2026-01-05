@@ -20,8 +20,6 @@ export class WarrantyController {
   //CREAR UN REGISTRO DE GARANTÍA
   @Post()
   create(@Body() createWarrantyDto: CreateWarrantyDto) {
-    console.log('INFORMACION LLEGANDO ES: ', createWarrantyDto);
-
     return this.warrantyService.create(createWarrantyDto);
   }
 

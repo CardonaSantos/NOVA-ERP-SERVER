@@ -141,5 +141,6 @@ export class QueryVentasTable {
   isVendedor: boolean;
 
   @IsInt()
+  @IsOptional()
   usuarioId: number;
 }

@@ -139,20 +139,18 @@ export class ClientService {
 
   async update(id: number, updateClientDto: UpdateClientDto) {
     try {
-      this.logger.log('el dto updater es: ', updateClientDto);
-
       // Normalizar y validar
-      const dpi = normalizeDpi(updateClientDto.dpi);
-      const nit = normalizeNit(updateClientDto.nit);
-      this.logger.log('El DPI es: ', dpi);
-      this.logger.log('El NIT es: ', nit);
+      // const dpi = normalizeDpi(updateClientDto.dpi);
+      // const nit = normalizeNit(updateClientDto.nit);
+      // this.logger.log('El DPI es: ', dpi);
+      // this.logger.log('El NIT es: ', nit);
 
-      ensureOneDoc(dpi, nit);
-      if (dpi && !isValidDpi(dpi))
-        throw new BadRequestException('DPI inválido.');
-      if (nit && !isValidNit(nit))
-        throw new BadRequestException('NIT inválido.');
-
+      // ensureOneDoc(dpi, nit);
+      // if (dpi && !isValidDpi(dpi))
+      //   throw new BadRequestException('DPI inválido.');
+      // if (nit && !isValidNit(nit))
+      //   throw new BadRequestException('NIT inválido.');
+      const { dpi, nit } = updateClientDto;
       const userUpdated = await this.prisma.cliente.update({
         where: { id },
         data: {

@@ -642,10 +642,6 @@ export class VentaService {
         throw new BadRequestException('sucursalId es requerido');
       }
 
-      this.logger.log(
-        `DTO recibido query ventas historial, M:Ventas ==>:\n${JSON.stringify(query, null, 2)}`,
-      );
-
       const AND: Prisma.VentaWhereInput[] = [{ sucursalId, anulada: false }];
 
       if (isVendedor) {
@@ -653,14 +649,11 @@ export class VentaService {
           usuarioId: usuarioId,
         });
       }
-      // rango de fechas
-      // rango de fechas (INCLUYENTE en días)
       if (fechaDesde || fechaHasta) {
         const start = fechaDesde
           ? dayjs(fechaDesde).startOf('day').toDate()
           : undefined;
 
-        // end exclusivo: inicio del día siguiente
         const endExclusive = fechaHasta
           ? dayjs(fechaHasta).add(1, 'day').startOf('day').toDate()
           : undefined;
@@ -1143,6 +1136,71 @@ export class VentaService {
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException('Error al obtener las ventas');
+    }
+  }
+
+  async getVentaGarantia(id: number) {
+    try {
+      const venta = await this.prisma.venta.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          imei: true,
+          productos: {
+            select: {
+              cantidad: true,
+              precioVenta: true,
+              producto: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  codigoProducto: true,
+                  descripcion: true,
+                },
+              },
+            },
+          },
+          cliente: {
+            select: {
+              id: true,
+              nombre: true,
+              telefono: true,
+              dpi: true,
+              direccion: true,
+            },
+          },
+        },
+      });
+
+      if (!venta) {
+        throw new Error('Venta no encontrada');
+      }
+
+      const formatt = {
+        id: venta.id,
+        imei: venta.imei ?? null,
+
+        venta: (venta.productos ?? []).map((v) => ({
+          id: venta.id,
+          nombre: v.producto?.nombre ?? null,
+          descripcion: v.producto?.descripcion ?? null,
+          codigoProducto: v.producto?.codigoProducto ?? null,
+        })),
+
+        cliente: venta.cliente
+          ? {
+              id: venta.cliente.id,
+              nombre: venta.cliente.nombre,
+              telefono: venta.cliente.telefono,
+              direccion: venta.cliente.direccion,
+            }
+          : null,
+      };
+
+      return formatt;
+    } catch (error) {
+      console.error(error);
+      throw new Error('Error obteniendo venta con garantía');
     }
   }
 }

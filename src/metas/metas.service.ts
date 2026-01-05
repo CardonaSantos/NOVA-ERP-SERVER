@@ -114,16 +114,13 @@ export class MetasService {
     }
   }
 
-  async findAllSellerGoal(idSucursal: number) {
+  async findAllSellerGoal() {
     try {
-      console.log('Metas de las tiendas');
-
       const regists = await this.prisma.metaUsuario.findMany({
         orderBy: {
           fechaInicio: 'desc',
         },
         where: {
-          //NO EN
           estado: { notIn: ['CANCELADO'] },
         },
         select: {
@@ -220,15 +217,12 @@ export class MetasService {
   async findAllMetasToSummary() {
     try {
       const metasCobrosToSummary = await this.prisma.metaCobros.findMany({
-        // where: {
-        //   sucursalId: idSucursal,
-        // },
         orderBy: {
           fechaCreado: 'desc',
         },
         where: {
           estado: {
-            notIn: ['CANCELADO', 'CERRADO', 'FINALIZADO'],
+            notIn: ['CANCELADO', 'CERRADO'],
           },
         },
         include: {

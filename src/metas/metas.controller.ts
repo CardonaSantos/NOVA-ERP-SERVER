@@ -52,7 +52,7 @@ export class MetasController {
 
   @Get('/get-all-seller-goals/:id')
   findAllSellerGoal(@Param('id', ParseIntPipe) id: number) {
-    return this.metasService.findAllSellerGoal(id);
+    return this.metasService.findAllSellerGoal();
   }
 
   @Get('/get-all-my-goals/:id')

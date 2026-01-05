@@ -37,6 +37,11 @@ export class VentaController {
     return await this.ventaService.findAllSaleCustomer(customerId);
   }
 
+  @Get('/garantia-venta/:ventaId')
+  async getProductsToGarantia(@Param('ventaId', ParseIntPipe) ventaId: number) {
+    return await this.ventaService.getVentaGarantia(ventaId);
+  }
+
   @Get('/find-my-sucursal-sales/:id')
   async findAllSaleSucursal(
     @Param('id', ParseIntPipe) id: number,
