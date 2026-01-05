@@ -629,8 +629,15 @@ export class MetasService {
 
   async updateMetaTienda(id: number, updateMetaDto: UpdateMetaDto) {
     try {
-      const { tituloMeta, EstadoMetaTienda, montoMeta, montoActual } =
-        updateMetaDto;
+      const {
+        tituloMeta,
+        EstadoMetaTienda,
+        montoMeta,
+        montoActual,
+        fechaInicio,
+        fechaFin,
+      } = updateMetaDto;
+
       const estado = EstadoMetaTienda as EstadoMetaTienda;
 
       await this.prisma.$transaction(async (tx) => {
@@ -653,6 +660,8 @@ export class MetasService {
             montoMeta: Number(montoMeta),
             montoActual: montoActualFinal,
             tituloMeta,
+            ...(fechaInicio && { fechaInicio: new Date(fechaInicio) }),
+            ...(fechaFin && { fechaFin: new Date(fechaFin) }),
           },
         });
       });
@@ -674,15 +683,13 @@ export class MetasService {
 
   async updateMetaCobros(id: number, updateMetaDto: UpdateMetaCobroDto) {
     try {
-      console.log('El ID recibido es:', id);
       console.log('Datos recibidos:', updateMetaDto);
 
-      // const { tituloMeta, estado, montoMeta } = updateMetaDto;
-      const { tituloMeta, EstadoMetaTienda, montoMeta } = updateMetaDto;
-      const estado = EstadoMetaTienda as EstadoMetaCobro; // 🔹 Convertir y asignar
+      const { tituloMeta, estadoMetaCobro, montoMeta, fechaFin, fechaInicio } =
+        updateMetaDto;
+      const estado = estadoMetaCobro as EstadoMetaCobro;
 
       await this.prisma.$transaction(async (tx) => {
-        // Buscar la meta antes de actualizar
         const metaFind = await tx.metaCobros.findUnique({
           where: { id },
         });
@@ -690,8 +697,6 @@ export class MetasService {
         if (!metaFind) {
           throw new NotFoundException('Error al encontrar el registro de meta');
         }
-
-        // Verificar si el estado es válido antes de actualizar
         if (
           !Object.values(EstadoMetaCobro).includes(estado as EstadoMetaCobro)
         ) {
@@ -703,9 +708,11 @@ export class MetasService {
         const metaUpdated = await tx.metaCobros.update({
           where: { id },
           data: {
-            estado: estado as EstadoMetaCobro, // Aseguramos que sea un enum válido
+            estado: estado as EstadoMetaCobro,
             montoMeta: Number(montoMeta),
             tituloMeta,
+            fechaInicio: new Date(fechaInicio),
+            fechaFin: new Date(fechaFin),
           },
         });
 

@@ -85,8 +85,6 @@ export class MetasController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMetaDto: UpdateMetaCobroDto,
   ) {
-    console.log('Entrando al service update cobro');
-
     return this.metasService.updateMetaCobros(id, updateMetaDto);
   }
 
