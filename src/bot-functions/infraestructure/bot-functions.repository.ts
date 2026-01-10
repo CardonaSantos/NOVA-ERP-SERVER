@@ -10,12 +10,14 @@ export class BotFunctionsRepository implements BotFunctions {
 
   async search(dto: BotSearchProductoDto) {
     try {
-      this.logger.log('El dto enviado desde el BOT SERVER ES: ', dto);
-
       if (!dto) {
         this.logger.warn('DTO recibido es null o undefined');
         return [];
       }
+
+      this.logger.log(
+        `DTO recibido desde BOT:\n${JSON.stringify(dto, null, 2)}`,
+      );
 
       const { producto, categorias } = dto;
 
