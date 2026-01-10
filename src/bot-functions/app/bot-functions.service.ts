@@ -16,7 +16,10 @@ export class BotFunctionsService {
     try {
       return await this.bot_functions_repo.search(dto);
     } catch (error) {
-      this.logger.log('Error: ', error);
+      // this.logger.log('Error en BOT FUNCTION ERP ', error);
+      // return [];
+      this.logger.error('Error en makeSearchProducts', error);
+      throw error;
     }
   }
 }
