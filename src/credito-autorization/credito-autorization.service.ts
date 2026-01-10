@@ -73,99 +73,128 @@ export class CreditoAutorizationService {
         `DTO recibido en create autorizacion:\n${JSON.stringify(dto, null, 2)}`,
       );
 
-      // ===================== Validaciones/normalizaciones previas =====================
+      if (dto.interesSobreVenta < 0 || dto.interesSobreVenta > 100) {
+        throw new BadRequestException('interesSobreVenta inválido.');
+      }
+
+      // ===================== Validaciones =====================
       this.verifyCore(dto);
 
       const saneLines = this.sanitizeAndValidateLines(dto.lineas);
 
-      // Sumar totales desde servidor (no confiar 100% en cliente)
-      const serverSum = this.sumLineSubtotals(saneLines);
-      if (serverSum !== dto.totalPropuesto) {
-        this.logger.warn(
-          `[CreditoAutorizationService] totalPropuesto del cliente (${dto.totalPropuesto}) difiere del calculado en servidor (${serverSum}). Se usará el del servidor.`,
+      // ===================== Totales =====================
+      const cuotas = this.sanitizeCuotasPropuestas(dto.cuotasPropuestas);
+
+      // Calcular la suma real de las cuotas
+      const totalSumaCuotas = cuotas.reduce((acc, c) => acc + c.monto, 0);
+
+      // ===================== Totales =====================
+      const base = this.sumLineSubtotals(saneLines);
+
+      // LÓGICA CORREGIDA:
+      // Si la suma de cuotas es mayor que la base, asumimos que esa diferencia es el interés implícito
+      // y usamos la suma de cuotas como el Total Propuesto real.
+      let totalConInteres = 0;
+
+      if (totalSumaCuotas > 0) {
+        // Prioridad: Lo que suman las cuotas
+        totalConInteres = Number(totalSumaCuotas.toFixed(2));
+      } else {
+        // Fallback: Cálculo por porcentaje si no hubiera cuotas (aunque tu validación exige cuotas)
+        const interesSobreVenta = Number(dto.interesSobreVenta || 0);
+        totalConInteres = Number(
+          (base * (1 + interesSobreVenta / 100)).toFixed(2),
         );
       }
 
-      // Cuota inicial coherente con plan (se sobreescribe si viene en cuotasPropuestas)
+      // Validar integridad (Opcional, solo warning)
+      if (
+        Math.abs(totalConInteres - base) < 0.01 &&
+        dto.interesTipo !== 'NONE'
+      ) {
+        this.logger.warn(
+          'Hay tipo de interés pero el monto total es igual a la base.',
+        );
+      }
+
+      // otros
+      // const base = this.sumLineSubtotals(saneLines);
+      const interesSobreVenta = Number(dto.interesSobreVenta || 0);
+      // const totalConInteres = Number(
+      //   (base * (1 + interesSobreVenta / 100)).toFixed(2),
+      // );
+
+      if (Math.abs(totalConInteres - Number(dto.totalPropuesto || 0)) > 0.01) {
+        this.logger.warn(
+          `totalPropuesto cliente (${dto.totalPropuesto}) ≠ total servidor (${totalConInteres}). Se usará el del servidor.`,
+        );
+      }
+
+      // ===================== Enganche =====================
       const cuotaInicialByPlan = this.resolveEnganche(
         dto.planCuotaModo,
         dto.cuotaInicialPropuesta,
       );
 
-      // Primera cuota
+      // ===================== Fechas =====================
       const today = dayjs().tz(TZGT);
       const primeraCuotaDate = dto.fechaPrimeraCuota
-        ? dayjs(dto.fechaPrimeraCuota).toDate()
-        : today.toDate();
+        ? dayjs.tz(dto.fechaPrimeraCuota, TZGT).startOf('day').toDate()
+        : today.startOf('day').toDate();
 
-      // ====== NUEVO: validar/normalizar cuotas propuestas ======
-      const cuotas = this.sanitizeCuotasPropuestas(dto.cuotasPropuestas);
+      // ===================== Cuotas =====================
+      // const cuotas = this.sanitizeCuotasPropuestas(dto.cuotasPropuestas);
 
-      // Suma de cuotas propuesta (incluyendo enganche si existe)
-      const sumaCuotas = cuotas.reduce((acc, c) => acc + c.monto, 0);
-
-      // Si la cuotaInicial en cabecera difiere del ENGANCHE de cuotas, usamos el de cuotas
       const enganchePropuesto =
         cuotas.find((c) => c.etiqueta === 'ENGANCHE')?.monto ?? 0;
+
       if (
         dto.cuotaInicialPropuesta &&
         Math.abs(dto.cuotaInicialPropuesta - enganchePropuesto) > 0.01
       ) {
         this.logger.warn(
-          `Enganche en cabecera (${dto.cuotaInicialPropuesta}) difiere del de cuotas (${enganchePropuesto}). Se usará el de cuotas.`,
+          `Enganche cabecera (${dto.cuotaInicialPropuesta}) ≠ enganche cuotas (${enganchePropuesto}). Se usará el de cuotas.`,
         );
       }
-      const cuotaInicialFinal = enganchePropuesto || cuotaInicialByPlan;
 
+      const cuotaInicialFinal = enganchePropuesto || cuotaInicialByPlan;
+      let autorization;
       // ===================== Transacción =====================
       const createdId = await this.prisma.$transaction(async (tx) => {
-        // Cabecera
-        const autorization = await tx.solicitudCreditoVenta.create({
+        autorization = await tx.solicitudCreditoVenta.create({
           data: {
             cliente: { connect: { id: dto.clienteId } },
             solicitadoPor: { connect: { id: dto.solicitadoPorId } },
             sucursal: { connect: { id: dto.sucursalId } },
-            // Propuesta económica
-            totalPropuesto: serverSum, // principal (suma lineas servidor)
-            cuotaInicialPropuesta: cuotaInicialFinal, // ENGANCHE (de cuotas o por plan)
+
+            totalPropuesto: totalConInteres,
+            cuotaInicialPropuesta: cuotaInicialFinal,
             cuotasTotalesPropuestas: dto.cuotasTotalesPropuestas,
             interesTipo: dto.interesTipo,
             interesPorcentaje: dto.interesPorcentaje,
             planCuotaModo: dto.planCuotaModo,
             diasEntrePagos: dto.diasEntrePagos,
             fechaPrimeraCuota: primeraCuotaDate,
-            // Flujo
+
             comentario: dto.comentario || null,
             estado: 'PENDIENTE',
-            // Si quieres guardar la suma de cuotas con interés (opcional):
           },
         });
 
-        this.logger.log(
-          '[CreditoAutorizationService] Cabecera creada:',
-          autorization,
-        );
-
-        // ---- Líneas
-        const createdLines = await Promise.all(
+        await Promise.all(
           saneLines.map((l) => this.createLinea(tx, autorization.id, l)),
         );
-        this.logger.log(
-          '[CreditoAutorizationService] Líneas creadas:',
-          createdLines,
-        );
 
-        // Cuotas propuestas
-        const createdCuotas = await Promise.all(
+        await Promise.all(
           cuotas.map((c) =>
             tx.solicitudCreditoVentaCuota.create({
               data: {
                 solicitud: { connect: { id: autorization.id } },
                 numero: c.numero,
-                fecha: c.fecha, // Date
+                fecha: c.fecha,
                 monto: c.monto,
                 etiqueta: c.etiqueta,
-                origen: c.origen, // 'AUTO' | 'MANUAL'
+                origen: c.origen,
                 esManual: c.esManual,
                 montoCapital: c.montoCapital ?? null,
                 montoInteres: c.montoInteres ?? null,
@@ -174,80 +203,51 @@ export class CreditoAutorizationService {
           ),
         );
 
-        this.logger.log(
-          `[CreditoAutorizationService] Cuotas propuestas creadas (${createdCuotas.length}):`,
-          createdCuotas,
-        );
-
-        // ---- Historial
-        const historial = await tx.solicitudCreditoVentaHistorial.create({
+        await tx.solicitudCreditoVentaHistorial.create({
           data: {
             solicitud: { connect: { id: autorization.id } },
             accion: 'CREADA',
             comentario: dto.comentario || null,
-            actor: dto.solicitadoPorId
-              ? { connect: { id: dto.solicitadoPorId } }
-              : undefined,
-          },
-        });
-        this.logger.log(
-          '[CreditoAutorizationService] Historial creado:',
-          historial,
-        );
-
-        // Retornar entidad con relaciones
-        const full = await tx.solicitudCreditoVenta.findUnique({
-          where: { id: autorization.id },
-          include: {
-            lineas: true,
-            cuotasPropuestas: { orderBy: { numero: 'asc' } }, // <— NUEVO
-            historial: { orderBy: { fecha: 'desc' } },
-            cliente: true,
-            sucursal: true,
-            solicitadoPor: true,
-            aprobadoPor: true,
+            actor: { connect: { id: dto.solicitadoPorId } },
           },
         });
 
         return autorization.id;
       });
 
+      // ===================== Notificación =====================
       const rec = await this.prisma.solicitudCreditoVenta.findUnique({
-        where: {
-          id: createdId,
-        },
+        where: { id: createdId },
         select: selectCreditAutorization,
       });
 
       if (!rec) throw new Error('Re-fetch falló');
+
       const item = normalizeSolicitud(rec);
       this.ws.emitCreditAuthorizationCreated(item);
-      //NOTIFICACION
-      // === 1) Notificación para admins de la sucursal ===
+
       const adminsSucursal = await this.prisma.usuario.findMany({
         where: { rol: 'ADMIN', sucursalId: dto.sucursalId, activo: true },
         select: { id: true },
       });
-      let userIds = adminsSucursal.map((a) => a.id);
 
-      // Fallback a admins globales (por si la sucursal no tiene)
-      if (userIds.length === 0) {
-        const adminsGlobal = await this.prisma.usuario.findMany({
-          where: { rol: 'ADMIN', activo: true },
-          select: { id: true },
-        });
-        userIds = adminsGlobal.map((a) => a.id);
-      }
+      const userIds = adminsSucursal.length
+        ? adminsSucursal.map((a) => a.id)
+        : (
+            await this.prisma.usuario.findMany({
+              where: { rol: 'ADMIN', activo: true },
+              select: { id: true },
+            })
+          ).map((a) => a.id);
 
-      // Crea la notificación (persistencia + WS 'noti:new' por usuario)
       await this.notifications.createForUsers({
         userIds,
         titulo: 'Nueva autorización de crédito',
-        mensaje: `Se creó una autorización para ${item.cliente?.nombre ?? 'cliente'} por Q${item.economico?.totalPropuesto ?? 0}.`,
+        mensaje: `Se creó una autorización para ${item.cliente?.nombre ?? 'cliente'} por Q${autorization}`,
         categoria: 'CREDITO',
         severidad: 'INFORMACION',
         subtipo: 'CREDIT_AUTH_CREATED',
-        route: `/creditos/autorizaciones/${item.id}`, // ajusta a tu ruta real
+        route: `/creditos/autorizaciones/${item.id}`,
         referenciaTipo: 'SolicitudCreditoVenta',
         referenciaId: item.id,
         remitenteId: dto.solicitadoPorId,
@@ -255,24 +255,16 @@ export class CreditoAutorizationService {
         audiencia: 'USUARIOS',
         meta: {
           solicitudId: item.id,
-          totalPropuesto: item.economico?.totalPropuesto ?? 0,
+          totalPropuesto: item.economico.totalPropuesto,
           cliente: { id: item.cliente?.id, nombre: item.cliente?.nombre },
           sucursal: { id: dto.sucursalId },
         },
       });
 
-      // Respuesta final
-      this.logger.log(
-        '[CreditoAutorizationService] Autorización creada OK (full):',
-      );
-      this.logger.log(JSON.stringify(createdId, null, 2));
-
+      this.logger.log('[CreditoAutorizationService] Autorización creada OK');
       return createdId;
     } catch (error) {
-      this.logger.error(
-        'Error en modulo crear autorizacion: ',
-        error?.stack || error,
-      );
+      this.logger.error('Error en create autorizacion:', error?.stack || error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal error: Error inesperado en módulo autorizacion',
@@ -321,9 +313,10 @@ export class CreditoAutorizationService {
         throw new BadRequestException(`Cuota ${idx + 1}: monto inválido.`);
       }
 
-      const fecha = dayjs(c.fechaISO).isValid()
-        ? dayjs(c.fechaISO).toDate()
+      const fecha = dayjs.tz(c.fechaISO, TZGT).isValid()
+        ? dayjs.tz(c.fechaISO, TZGT).startOf('day').toDate()
         : null;
+
       if (!fecha)
         throw new BadRequestException(`Cuota ${idx + 1}: fecha inválida.`);
 

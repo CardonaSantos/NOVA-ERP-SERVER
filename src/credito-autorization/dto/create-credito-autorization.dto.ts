@@ -31,6 +31,8 @@ export class CreateCreditoAutorizationDto {
   @IsInt() sucursalId: number;
   @IsInt() clienteId: number;
 
+  interesSobreVenta?: number;
+
   @IsNumber() totalPropuesto: number; // principal (suma productos)
   @IsOptional() @IsNumber() cuotaInicialPropuesta?: number;
   @IsInt() cuotasTotalesPropuestas: number;
