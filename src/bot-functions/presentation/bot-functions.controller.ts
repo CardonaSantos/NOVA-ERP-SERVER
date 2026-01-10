@@ -8,6 +8,7 @@ import {
   Delete,
   Headers,
   UnauthorizedException,
+  Req,
 } from '@nestjs/common';
 import { BotFunctionsService } from '../app/bot-functions.service';
 import { CreateBotFunctionDto } from '../dto/create-bot-function.dto';
@@ -26,7 +27,11 @@ export class BotFunctionsController {
   create(
     @Body() dto: BotSearchProductoDto,
     @Headers('x-internal-secret') secretKey: string,
+    @Req() req: Request,
   ) {
+    console.log('RAW BODY:', req.body);
+    console.log('DTO TRANSFORMADO:', dto);
+
     const INTERNAL_SECRET = this.config.get('INTERNAL_SECRET');
 
     if (INTERNAL_SECRET !== secretKey) {
