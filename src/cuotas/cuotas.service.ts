@@ -29,7 +29,6 @@ import * as timezone from 'dayjs/plugin/timezone';
 import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimiento-financiero.service';
-import { MetodoPago } from '@prisma/client';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(isSameOrBefore);
@@ -228,73 +227,6 @@ export class CuotasService {
     }
   }
 
-  // async registerNewPay(createCuotaDto: CuotaDto) {
-  //   const {
-  //     CreditoID,
-  //     ventaCuotaId,
-  //     usuarioId,
-  //     monto,
-  //     metodoPago,
-  //     sucursalId,
-  //     cuentaBancariaId,
-  //     registroCajaId,
-  //     referencia,
-  //     comentario,
-  //   } = createCuotaDto as any;
-  //   this.logger.debug(
-  //     `DTO recibido:\n${JSON.stringify(createCuotaDto, null, 2)}`,
-  //   );
-
-  //   return this.prisma.$transaction(async (tx) => {
-  //     // 1) Actualizar cuota
-  //     const cuota = await tx.cuota.update({
-  //       where: { id: ventaCuotaId },
-  //       data: {
-  //         monto,
-  //         estado: 'PAGADA',
-  //         usuarioId,
-  //         comentario,
-  //         fechaPago: dayjs().tz(TZGT).startOf('day').toDate(),
-  //       },
-  //     });
-
-  //     // 2) Actualizar acumulado del crédito y venta
-  //     const vc = await tx.ventaCuota.update({
-  //       where: { id: CreditoID },
-  //       data: { totalPagado: { increment: monto } },
-  //       include: { venta: true },
-  //     });
-  //     if (vc?.venta) {
-  //       await tx.venta.update({
-  //         where: { id: vc.venta.id },
-  //         data: { totalVenta: { increment: monto } },
-  //       });
-  //     }
-
-  //     // 3) Movimiento financiero (motivo que uses para cobro de crédito)
-  //     const MF = await this.mf.createMovimiento(
-  //       {
-  //         sucursalId,
-  //         usuarioId,
-  //         monto,
-  //         motivo: 'VENTA', // o el que tengas mapeado
-  //         metodoPago, // si no lo pasas, se infiere
-  //         registroCajaId, // solo si efectivo (si no, lo resuelve)
-  //         cuentaBancariaId, // requerido si no es efectivo
-  //         descripcion: `Pago cuota ${ventaCuotaId}`,
-  //         referencia,
-  //       },
-  //       { tx },
-  //     );
-
-  //     this.logger.log('El MF es: ', MF);
-
-  //     // 4) Meta/bono del usuario (si quieres que sea atómico con todo)
-  //     await this.metaService.incrementarMeta(usuarioId, monto, 'tienda', tx);
-
-  //     return cuota;
-  //   });
-  // }
   async registerNewPay(createCuotaDto: CuotaDto) {
     const {
       CreditoID,

@@ -1,12 +1,8 @@
 import {
-  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { CreateCuotasMoraCronDto } from './dto/create-cuotas-mora-cron.dto';
-import { UpdateCuotasMoraCronDto } from './dto/update-cuotas-mora-cron.dto';
-//
 import * as dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import * as utc from 'dayjs/plugin/utc';
@@ -15,15 +11,11 @@ import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import * as customParseFormat from 'dayjs/plugin/customParseFormat';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { EstadoPago, NotiSeverity, Rol } from '@prisma/client';
-import {
-  CreditoVentaCuotaSelect,
-  SelectCreditosActivos,
-} from './select/selectCredito';
+import { Cron } from '@nestjs/schedule';
+import { NotiSeverity } from '@prisma/client';
+import { SelectCreditosActivos } from './select/selectCredito';
 import { TZGT } from 'src/utils/utils';
 import { NotificationService } from 'src/notification/notification.service';
-import { UiNotificacionDTO } from 'src/notification/common/UINotificationDto';
 dayjs.extend(customParseFormat);
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -39,14 +31,9 @@ export class CuotasMoraCronService {
     private readonly noti: NotificationService,
   ) {}
 
-  // Ejecuta poco después de medianoche GT
-  // @Cron(CronExpression.EVERY_MINUTE, {
-  //   name: 'creditos.mora.daily',
-  //   timeZone: TZGT,
-  // })
-  @Cron('0 4 * * *', {
+  @Cron('10 0 * * *', {
     name: 'creditos.mora.daily',
-    timeZone: TZGT, // 'America/Guatemala'
+    timeZone: TZGT,
   })
   async accrueMoraAndRemindOnceDaily() {
     try {
@@ -77,59 +64,45 @@ export class CuotasMoraCronService {
     const tasaDiaria = hasInterest ? interes / 100 / 365 : 0;
 
     for (const c of credito.cuotas) {
+      const esperado = Number(c.montoEsperado ?? c.monto ?? 0);
+      const pagado = Number(c.montoPagado ?? 0);
+
+      if (pagado >= esperado) continue;
+      if (['PAGADA', 'CERRADA', 'CANCELADA'].includes(c.estado)) continue;
+
       const venc = dayjs(c.fechaVencimiento).tz(TZGT).startOf('day');
 
-      // sin días de gracia
       if (!today.isAfter(venc)) continue;
 
-      //  si ya calculaste hoy, salta
       if (c.fechaUltimoCalculoMora) {
         const lastCalc = dayjs(c.fechaUltimoCalculoMora)
           .tz(TZGT)
           .startOf('day');
-        if (lastCalc.isSame(today, 'day')) {
-          // Ya se calculó hoy → si no hay interés, igual marca ATRASADA/recordatorio; si hay interés, skip.
-          if (!hasInterest) {
-            await this.markAtrasadaYNotificar(credito, c, today, false, 0);
-          }
-          continue;
-        }
+        if (lastCalc.isSame(today, 'day')) continue;
       }
 
-      // delta de días idempotente
-      const last = c.fechaUltimoCalculoMora
+      const lastCalcOrVenc = c.fechaUltimoCalculoMora
         ? dayjs(c.fechaUltimoCalculoMora).tz(TZGT).startOf('day')
-        : venc; // primera vez, desde el vencimiento
+        : venc;
 
-      const from = last.isAfter(venc) ? last : venc;
+      const from = lastCalcOrVenc.isAfter(venc) ? lastCalcOrVenc : venc;
       const dias = Math.max(0, today.diff(from, 'day'));
-      if (dias === 0) {
-        if (!hasInterest) {
-          await this.markAtrasadaYNotificar(credito, c, today, false, 0);
-        }
-        continue;
-      }
 
-      // saldo de capital (sin incluir mora)
-      const esperado = (c.montoEsperado ?? c.monto) || 0;
-      const saldoCapital = Math.max(0, esperado - (c.montoPagado ?? 0));
-      if (saldoCapital <= 0) {
-        await this.markAtrasadaYNotificar(credito, c, today, false, 0);
-        continue;
-      }
+      if (dias === 0) continue;
+
+      const saldoCapital = Math.max(0, esperado - pagado);
+      if (saldoCapital <= 0) continue;
 
       if (!hasInterest) {
         await this.markAtrasadaYNotificar(credito, c, today, false, 0);
         continue;
       }
 
-      // mora
       const moraDeltaRaw = saldoCapital * tasaDiaria * dias;
       const moraDelta = Math.round(moraDeltaRaw * 10000) / 10000;
+
       if (moraDelta > 0) {
         await this.applyMoraDelta(credito, c, today, moraDelta, dias);
-      } else {
-        await this.markAtrasadaYNotificar(credito, c, today, false, 0);
       }
     }
   }
@@ -141,6 +114,9 @@ export class CuotasMoraCronService {
     withMora: boolean,
     moraDelta: number,
   ) {
+    // No tocar estados finales
+    if (['PAGADA', 'CERRADA', 'CANCELADA'].includes(cuota.estado)) return;
+
     await this.prisma.$transaction(async (tx) => {
       await tx.ventaCuota.update({
         where: { id: credito.id },
@@ -150,19 +126,24 @@ export class CuotasMoraCronService {
       if (cuota.estado !== 'ATRASADA') {
         await tx.cuota.update({
           where: { id: cuota.id },
-          data: { estado: 'ATRASADA' },
+          data: {
+            estado: 'ATRASADA',
+            fechaUltimoCalculoMora: today.toDate(),
+          },
         });
       }
 
-      await tx.ventaCuotaHistorial.create({
-        data: {
-          ventaCuotaId: credito.id,
-          accion: withMora ? 'MORA_REGISTRADA' : 'CAMBIO_ESTADO',
-          comentario: withMora
-            ? `Mora registrada: +Q${moraDelta.toFixed(2)}`
-            : `Cuota #${cuota.numero} vencida (sin interés configurado)`,
-        },
-      });
+      if (withMora || cuota.estado !== 'ATRASADA') {
+        await tx.ventaCuotaHistorial.create({
+          data: {
+            ventaCuotaId: credito.id,
+            accion: withMora ? 'MORA_REGISTRADA' : 'CAMBIO_ESTADO',
+            comentario: withMora
+              ? `Mora registrada: +Q${moraDelta.toFixed(2)}`
+              : `Cuota #${cuota.numero} vencida`,
+          },
+        });
+      }
     });
 
     await this.notify(
@@ -182,7 +163,10 @@ export class CuotasMoraCronService {
     moraDeltaInput: number,
     dias: number,
   ) {
+    if (['PAGADA', 'CERRADA', 'CANCELADA'].includes(cuota.estado)) return;
+
     const moraDelta = Math.round(Number(moraDeltaInput) * 10000) / 10000;
+    if (moraDelta <= 0) return;
 
     await this.prisma.$transaction(async (tx) => {
       const before = await tx.cuota.findUnique({
@@ -194,59 +178,37 @@ export class CuotasMoraCronService {
           montoEsperado: true,
           montoPagado: true,
           moraAcumulada: true,
-          fechaUltimoCalculoMora: true,
         },
       });
-      if (!before) return; // cuota ya no existe? salir silenciosamente o lanza error
+      if (!before) return;
 
-      // Asegura que el crédito quede marcado en EN_MORA
+      const esperado = Number(before.montoEsperado ?? before.monto ?? 0);
+      const pagado = Number(before.montoPagado ?? 0);
+      if (pagado >= esperado) return;
+
       await tx.ventaCuota.update({
         where: { id: credito.id },
         data: { estado: 'EN_MORA' },
       });
-
-      const esperado = Number(before.montoEsperado ?? before.monto ?? 0);
-      const pagado = Number(before.montoPagado ?? 0);
 
       const after = await tx.cuota.update({
         where: { id: before.id },
         data: {
           moraAcumulada: { increment: moraDelta },
           estado: 'ATRASADA',
-          fechaUltimoCalculoMora: today.toDate(), // idempotencia diaria
-        },
-        select: {
-          id: true,
-          numero: true,
-          monto: true,
-          montoEsperado: true,
-          montoPagado: true,
-          moraAcumulada: true,
-          fechaUltimoCalculoMora: true,
+          fechaUltimoCalculoMora: today.toDate(),
         },
       });
 
-      // 🔎 LOG claro (4 decimales) — evita toFixed(2) para no “esconder” deltas pequeños
-      const saldoBase = Math.max(0, esperado - pagado);
-      this.logger.log(
-        `[MORA] credito=${credito.id} cuota=${before.id}#${before.numero} ` +
-          `dias=${dias} delta=${moraDelta.toFixed(4)} | ` +
-          `mora: ${Number(before.moraAcumulada ?? 0).toFixed(4)} -> ${Number(after.moraAcumulada ?? 0).toFixed(4)} | ` +
-          `saldoBase=Q${saldoBase.toFixed(2)} corte=${today.format('YYYY-MM-DD')}`,
-      );
-
-      // Historial con meta opcional (útil para auditoría)
       await tx.ventaCuotaHistorial.create({
         data: {
           ventaCuotaId: credito.id,
           accion: 'MORA_REGISTRADA',
           comentario: `Cuota #${after.numero}: +Q${moraDelta.toFixed(4)} por ${dias} día(s).`,
-          // meta: { dias, delta: moraDelta, saldoBase, corte: today.format('YYYY-MM-DD') } as any,
         },
       });
     });
 
-    // Notificación fuera de la transacción
     await this.notify(credito, cuota, 'ALERTA', true, moraDelta, today);
   }
 
@@ -258,6 +220,9 @@ export class CuotasMoraCronService {
     moraDelta: number,
     today: dayjs.Dayjs,
   ) {
+    if (['PAGADA', 'CERRADA', 'CANCELADA'].includes(cuota.estado)) return;
+    if (withMora && moraDelta <= 0) return;
+
     const userId = credito?.responsableCobroId;
     if (!userId) return;
 
@@ -265,14 +230,10 @@ export class CuotasMoraCronService {
       userId,
       categoria: 'CREDITO',
       severidad: withMora ? 'ALERTA' : 'INFORMACION',
-      titulo: withMora
-        ? 'Mora registrada en cuota'
-        : 'Cuota vencida (recordatorio)',
+      titulo: withMora ? 'Mora registrada en cuota' : 'Cuota vencida',
       mensaje: withMora
         ? `Cuota #${cuota.numero} ha acumulado Q${moraDelta.toFixed(2)} de mora.`
-        : `Cuota #${cuota.numero} vencida. Favor gestionar cobro.`,
-      route: null, // si tienes ruta del crédito, colócala: `/creditos/${credito.id}`
-      actionLabel: 'Ver crédito',
+        : `Cuota #${cuota.numero} vencida.`,
       meta: {
         creditoId: credito.id,
         cuotaId: cuota.id,

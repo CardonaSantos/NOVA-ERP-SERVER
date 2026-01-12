@@ -7,14 +7,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateCreditoDto } from './dto/create-credito.dto';
-import { UpdateCreditoDto } from './dto/update-credito.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { CreditoQuery } from './query/query';
 import { SelectCreditos } from './select/select-creditosResponse';
 import { normalizerCreditoRegist } from './common/normalizadorCredito';
 import { simpleCreditNormalizer } from './common/simpleNormalizacer';
-import { log } from 'console';
 
 @Injectable()
 export class CreditoService {

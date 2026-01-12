@@ -4,16 +4,10 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
-import {
-  CreateCreditoAutorizationDto,
-  CuotaPropuestaDto,
-} from './dto/create-credito-autorization.dto';
-import { UpdateCreditoAutorizationDto } from './dto/update-credito-autorization.dto';
+import { CreateCreditoAutorizationDto } from './dto/create-credito-autorization.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { verifyProps } from 'src/utils/verifyPropsFromDTO';
-
 import * as dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import * as utc from 'dayjs/plugin/utc';
@@ -23,7 +17,7 @@ import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import * as customParseFormat from 'dayjs/plugin/customParseFormat';
 import { TZGT } from 'src/utils/utils';
 import { selectCreditAutorization } from './helpers/select';
-import { AccionCredito, MetodoPago, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { GetCreditoAutorizacionesDto } from './dto/get-credito-autorizaciones.dto';
 import { normalizeSolicitud } from './common/normalizerAutorizacionesResponse';
 import { LegacyGateway } from 'src/web-sockets/websocket.gateway';
@@ -42,13 +36,6 @@ dayjs.extend(timezone);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 dayjs.locale('es');
-
-interface ItemFromLineProduct {
-  productoId: number;
-  cantidad: number;
-  subtotal: number;
-  precioUnitario: number;
-}
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + (Number(b) || 0), 0);
 
