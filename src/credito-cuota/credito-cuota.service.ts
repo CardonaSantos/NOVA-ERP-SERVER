@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { CreateCreditoCuotaDto } from './dto/create-credito-cuota.dto';
 import { UpdateCreditoCuotaDto } from './dto/update-credito-cuota.dto';
@@ -148,8 +149,136 @@ export class CreditoCuotaService {
     return `This action returns all creditoCuota`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} creditoCuota`;
+  async findOne(id: number) {
+    const cuota = await this.prisma.cuota.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        numero: true,
+        monto: true,
+        montoPagado: true,
+        moraAcumulada: true,
+        estado: true,
+        fechaVencimiento: true,
+        fechaPago: true,
+        comentario: true,
+        abonos: {
+          select: {
+            id: true,
+            montoTotal: true,
+            montoCapital: true,
+            montoInteres: true,
+            montoMora: true,
+            abono: {
+              select: {
+                id: true,
+                fechaAbono: true,
+                metodoPago: true,
+                referenciaPago: true,
+                montoTotal: true,
+                usuario: {
+                  select: {
+                    id: true,
+                    nombre: true,
+                  },
+                },
+                sucursal: {
+                  select: {
+                    id: true,
+                    nombre: true,
+                    direccion: true,
+                    telefono: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        ventaCuota: {
+          select: {
+            id: true,
+            numeroCredito: true,
+            cuotasTotales: true,
+            totalPagado: true,
+            montoTotalConInteres: true,
+            cliente: {
+              select: {
+                id: true,
+                nombre: true,
+                apellidos: true,
+                dpi: true,
+                telefono: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cuota) throw new NotFoundException(`Cuota #${id} no encontrada`);
+
+    // Tomamos el abono más reciente como el pago que se acaba de registrar
+    const ultimoAbonoCuota = cuota.abonos.at(-1);
+    const abono = ultimoAbonoCuota?.abono;
+
+    return {
+      // Cuota
+      cuotaId: cuota.id,
+      numeroCuota: cuota.numero,
+      totalCuotas: cuota.ventaCuota.cuotasTotales,
+      montoCuota: cuota.monto,
+      montoPagado: cuota.montoPagado,
+      moraAcumulada: cuota.moraAcumulada,
+      estadoCuota: cuota.estado,
+      fechaVencimiento: cuota.fechaVencimiento,
+      fechaPago: cuota.fechaPago,
+      comentario: cuota.comentario ?? '',
+
+      // Desglose del último abono
+      abono: ultimoAbonoCuota
+        ? {
+            id: abono?.id,
+            fecha: abono?.fechaAbono,
+            metodoPago: abono?.metodoPago,
+            referenciaPago: abono?.referenciaPago ?? '',
+            montoTotal: ultimoAbonoCuota.montoTotal,
+            montoCapital: ultimoAbonoCuota.montoCapital,
+            montoInteres: ultimoAbonoCuota.montoInteres,
+            montoMora: ultimoAbonoCuota.montoMora,
+            cobradoPor: abono?.usuario?.nombre ?? '',
+          }
+        : null,
+
+      // Crédito
+      credito: {
+        id: cuota.ventaCuota.id,
+        numeroCredito:
+          cuota.ventaCuota.numeroCredito ?? `VC-${cuota.ventaCuota.id}`,
+        montoTotalConInteres: cuota.ventaCuota.montoTotalConInteres,
+        totalPagado: cuota.ventaCuota.totalPagado,
+      },
+
+      // Cliente
+      cliente: {
+        id: cuota.ventaCuota.cliente.id,
+        nombre: cuota.ventaCuota.cliente.nombre,
+        apellidos: cuota.ventaCuota.cliente.apellidos,
+        nombreCompleto:
+          `${cuota.ventaCuota.cliente.nombre} ${cuota.ventaCuota.cliente.apellidos}`.trim(),
+        dpi: cuota.ventaCuota.cliente.dpi ?? '',
+        telefono: cuota.ventaCuota.cliente.telefono ?? '',
+      },
+
+      // Sucursal
+      sucursal: abono?.sucursal
+        ? {
+            id: abono.sucursal.id,
+            nombre: abono.sucursal.nombre,
+            direccion: abono.sucursal.direccion,
+            telefono: abono.sucursal.telefono,
+          }
+        : null,
+    };
   }
 
   update(id: number, updateCreditoCuotaDto: UpdateCreditoCuotaDto) {

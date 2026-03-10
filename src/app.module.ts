@@ -78,6 +78,8 @@ import { CuotasMoraCronModule } from './cuotas-mora-cron/cuotas-mora-cron.module
 import { ProrrateoModule } from './prorrateo/prorrateo.module';
 import { PayloadProductosModuleModule } from './payload-productos-module/payload-productos-module.module';
 import { BotFunctionsModule } from './bot-functions/bot-functions.module';
+import { ExcelReportsModule } from './excel-reports/excel-reports.module';
+import { PlantillaLegalCreditoModule } from './plantilla-legal-credito/plantilla-legal-credito.module';
 
 @Module({
   imports: [
@@ -158,6 +160,8 @@ import { BotFunctionsModule } from './bot-functions/bot-functions.module';
     ProrrateoModule,
     PayloadProductosModuleModule,
     BotFunctionsModule,
+    ExcelReportsModule,
+    PlantillaLegalCreditoModule,
   ],
   controllers: [AppController],
   providers: [AppService, CloudinaryProvider, SaldosServiceService],
