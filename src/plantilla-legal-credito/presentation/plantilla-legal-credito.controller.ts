@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import { PlantillaLegalCreditoService } from '../app/plantilla-legal-credito.service';
 import { CreatePlantillaLegalCreditoDto } from '../dto/create-plantilla-legal-credito.dto';
@@ -14,6 +15,7 @@ import { UpdatePlantillaLegalCreditoDto } from '../dto/update-plantilla-legal-cr
 
 @Controller('plantilla-legal-credito')
 export class PlantillaLegalCreditoController {
+  private readonly logger = new Logger(PlantillaLegalCreditoController.name);
   constructor(private readonly service: PlantillaLegalCreditoService) {}
 
   @Post()
@@ -24,6 +26,14 @@ export class PlantillaLegalCreditoController {
   @Get()
   findAll() {
     return this.service.findAll();
+  }
+
+  @Get('render/:ventaCuotaId/:plantillaId')
+  getContratoHTML(
+    @Param('ventaCuotaId', ParseIntPipe) ventaCuotaId: number,
+    @Param('plantillaId', ParseIntPipe) plantillaId: number,
+  ) {
+    return this.service.getContratoHTML(ventaCuotaId, plantillaId);
   }
 
   @Get(':id')
@@ -39,8 +49,8 @@ export class PlantillaLegalCreditoController {
     return this.service.update(id, dto);
   }
 
-  @Delete(':id')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.service.delete(id);
+  @Post('delete')
+  delete(@Body('id') id: number) {
+    return this.service.delete(Number(id));
   }
 }

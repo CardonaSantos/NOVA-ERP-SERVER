@@ -13,4 +13,13 @@ export interface PlantillaLegalRepository {
   delete(id: number): Promise<void>;
   findAll(): Promise<PlantillaLegalCredito[]>;
   findById(id: number): Promise<PlantillaLegalCredito | null>;
+
+  getContratoHTML(
+    ventaCuotaId: number,
+    plantillaId: number,
+  ): Promise<{
+    ventaCuotaId: number;
+    plantillaId: number;
+    html: string;
+  }>;
 }

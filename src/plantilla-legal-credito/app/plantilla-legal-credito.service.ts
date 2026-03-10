@@ -32,4 +32,8 @@ export class PlantillaLegalCreditoService {
   async findById(id: number) {
     return this.repo.findById(id);
   }
+
+  async getContratoHTML(ventaCuotaId: number, plantillaId: number) {
+    return this.repo.getContratoHTML(ventaCuotaId, plantillaId);
+  }
 }

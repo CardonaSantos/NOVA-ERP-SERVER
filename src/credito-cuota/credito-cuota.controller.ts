@@ -24,6 +24,7 @@ export class CreditoCuotaController {
   async findActivos() {
     return this.creditoCuotaService.findActivosConCuotasPendientes();
   }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.creditoCuotaService.findOne(+id);
