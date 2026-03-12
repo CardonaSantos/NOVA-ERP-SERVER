@@ -10,6 +10,10 @@ import {
 } from 'class-validator';
 
 export class CreateVentaDto {
+  @IsDate()
+  @IsOptional()
+  fechaVenta?: Date;
+
   @IsString()
   @IsOptional()
   referenciaPago?: string;

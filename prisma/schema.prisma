@@ -1148,6 +1148,7 @@ model MovimientoFinanciero {
 
   // 1:1 con Prorrateo (idempotencia por movimiento)
   prorrateo Prorrateo? @relation("MFToProrrateo")
+  abonoCreditos AbonoCredito[]
 
   @@unique([registroCajaId, referencia], map: "uq_movfin_turno_referencia") // 👈 idempotencia por turno
   //CONCILIACION EN REPORTES DE CIERRES CON BOLETAS
@@ -2358,6 +2359,10 @@ model Cuota {
 
 model AbonoCredito {
   id           Int        @id @default(autoincrement())
+
+  movimientoFinancieroId Int?
+  movimientoFinanciero   MovimientoFinanciero? @relation(fields: [movimientoFinancieroId], references: [id])
+
   ventaCuotaId Int
   ventaCuota   VentaCuota @relation("Credito_Abonos", fields: [ventaCuotaId], references: [id], onDelete: Cascade)
 

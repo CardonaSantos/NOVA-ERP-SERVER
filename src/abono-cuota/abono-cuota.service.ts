@@ -432,6 +432,38 @@ export class AbonoCuotaService {
         }
 
         // 7) (Caja/Banco) — pendiente de integrar si lo deseas
+        const movimientoMF = await tx.movimientoFinanciero.create({
+          data: {
+            sucursal: { connect: { id: dto.sucursalId } },
+            referencia: dto.referenciaPago ?? null,
+            descripcion: dto.observaciones,
+            deltaCaja: dto.montoTotal,
+            clasificacion: 'INGRESO',
+            motivo: 'COBRO_CREDITO',
+            usuario: { connect: { id: dto.usuarioId } },
+
+            ...(dto.registroCajaId
+              ? { registroCaja: { connect: { id: dto.registroCajaId } } }
+              : {}),
+
+            metodoPago: dto.metodoPago,
+          },
+        });
+
+        await tx.abonoCredito.update({
+          where: { id: abono.id },
+          data: {
+            movimientoFinanciero: {
+              connect: {
+                id: movimientoMF.id,
+              },
+            },
+          },
+        });
+
+        this.logger.log(
+          `cajaAdicion :\n${JSON.stringify(movimientoMF, null, 2)}`,
+        );
 
         return {
           ok: true,
@@ -486,6 +518,7 @@ export class AbonoCuotaService {
             fechaAbono: true,
             montoTotal: true,
             registroCajaId: true,
+            movimientoFinancieroId: true,
             detalles: {
               select: {
                 cuotaId: true,
@@ -616,6 +649,12 @@ export class AbonoCuotaService {
           AccionCredito.AJUSTE_MANUAL,
           comentarioBase,
         );
+
+        if (abono.movimientoFinancieroId) {
+          await tx.movimientoFinanciero.delete({
+            where: { id: abono.movimientoFinancieroId },
+          });
+        }
 
         if (flags.estado !== prevEstado) {
           await this.addHistorial(

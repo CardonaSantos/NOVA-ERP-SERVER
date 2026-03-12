@@ -45,6 +45,10 @@ export class CreateAbonoCuotaDto {
   @IsPositive()
   ventaCuotaId!: number;
 
+  @IsOptional()
+  @IsString()
+  observaciones?: string;
+
   @IsInt()
   @IsPositive()
   sucursalId!: number;

@@ -516,7 +516,6 @@ export class CreditoAutorizationService {
     );
 
     return this.prisma.$transaction(async (tx) => {
-      //AUTH Y RESPONSABLE
       const authorization = await tx.solicitudCreditoVenta.findUnique({
         where: { id: authCreditoId },
         select: selectCreditAutorization,
@@ -531,7 +530,6 @@ export class CreditoAutorizationService {
       });
       if (!admin) throw new BadRequestException('Admin no válido');
 
-      // Venta (ideal: con tx)
       const productosDTO: CreateVentaDto['productos'] =
         authorization.lineas.map((l) => ({
           selectedPriceId: l.precioSeleccionadoId,
@@ -539,19 +537,19 @@ export class CreditoAutorizationService {
           ...(l.presentacionId ? { presentacionId: l.presentacionId } : {}),
           ...(l.productoId ? { productoId: l.productoId } : {}),
         }));
-      const reffVenta = `CRED-${dayjs().year()}-${String(authCreditoId).padStart(5, '0')}`;
+
       const ventaDTO: CreateVentaDto = {
-        metodoPago: metodoPago ?? 'CREDITO',
+        metodoPago: 'CREDITO',
         sucursalId: admin.sucursalId,
         tipoComprobante: 'RECIBO',
         observaciones: comentario,
         usuarioId: adminId,
         clienteId: authorization.clienteId,
         productos: productosDTO,
+        fechaVenta: authorization.creadoEn,
       };
 
       const newVenta = await this.venta.createVentaTx(ventaDTO, tx);
-      //  Datos derivados de las cuotas propuestas
       const cuotasAuth = (authorization.cuotasPropuestas ??
         []) as cuotasPropuestas[];
       const montoTotalConInteres = sum(
@@ -589,15 +587,15 @@ export class CreditoAutorizationService {
           diasEntrePagos: authorization.diasEntrePagos ?? 0,
           planCuotaModo: authorization.planCuotaModo ?? 'IGUALES',
           comentario: authorization.comentario ?? undefined,
-          fechaContrato: new Date(),
+          fechaContrato: authorization.creadoEn ?? new Date(),
           garantiaMeses: 0,
           testigos: [],
           fechaProximoPago: primeraNormalDate ?? undefined,
           montoTotalConInteres,
+          creadoEn: authorization.creadoEn,
         },
       });
 
-      // Validar si hay enganche
       const itHasEnganche =
         !!authorization.cuotaInicialPropuesta &&
         authorization.planCuotaModo === 'PRIMERA_MAYOR';
