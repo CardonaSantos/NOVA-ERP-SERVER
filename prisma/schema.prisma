@@ -149,6 +149,7 @@ model Sucursal {
   abonosCredito           AbonoCredito[]          @relation("Sucursal_AbonosCredito") // <— backref
 
   prorrateos Prorrateo[] @relation("SucursalToProrrateos")
+  centrosCosto  CentroCosto[]
 }
 
 model Usuario {
@@ -229,7 +230,8 @@ model Usuario {
   ventasAnuladas Venta[] @relation(name: "AnuladoPor")
 
   creditosAsignados  VentaCuota[]   @relation("ResponsableCobroCredito") 
-
+  
+  movimientosPresupuesto MovimientoPresupuesto[]
 }
 
 // ============================================================================
@@ -286,6 +288,9 @@ model Producto {
   tipoPresentacion   TipoPresentacion? @relation(fields: [tipoPresentacionId], references: [id], onDelete: SetNull)
 
   solicitudesCreditoLineas SolicitudCreditoVentaLinea[] @relation("SolicitudCreditoLineaToProducto")
+
+  partidaPresupuestalId Int?
+  partidaPresupuestal   PartidaPresupuestal? @relation(fields: [partidaPresupuestalId], references: [id], onDelete: SetNull)
 }
 
 model ProductoPresentacion {
@@ -353,6 +358,9 @@ model Categoria {
   nombre         String                 @unique()
   productos      Producto[]             @relation(name: "CategoriaToProducto")
   presentaciones ProductoPresentacion[] @relation(name: "CategoriaToPresentacion")
+
+  partidaPresupuestalId Int?
+  partidaPresupuestal   PartidaPresupuestal? @relation(fields: [partidaPresupuestalId], references: [id], onDelete: SetNull)
 }
 
 model StockPresentacion {
@@ -1366,6 +1374,11 @@ model Requisicion {
   recepciones         RequisicionRecepcion[]
   movimientoStock     HistorialStock[]
   compra              Compra?                @relation
+
+  centroCostoId Int?
+  centroCosto   CentroCosto? @relation(fields: [centroCostoId], references: [id], onDelete: Restrict)
+
+  movimientosPresupuesto MovimientoPresupuesto[]
 }
 
 model RequisicionLinea {
@@ -1523,6 +1536,11 @@ model Compra {
 
   // Back-rel: movimientos de costo asociado apuntando a la compra
   movimientosCostosAsociados MovimientoFinanciero[] @relation("MF_to_Compra")
+
+  centroCostoId Int?
+  centroCosto   CentroCosto? @relation(fields: [centroCostoId], references: [id], onDelete: Restrict)
+
+  movimientosPresupuesto MovimientoPresupuesto[]
 
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
@@ -2431,11 +2449,140 @@ model PlantillaLegal {
   actualizadoEn DateTime @updatedAt
 }
 
+
+
+// ============================================================================
+// [NUEVO] MÓDULO DE CONTROL PRESUPUESTAL
+// ============================================================================
+
+enum EstadoPeriodo {
+  ABIERTO
+  CERRADO
+  BLOQUEADO
+}
+
+enum TipoMovimientoPresupuesto {
+  ASIGNACION_INICIAL
+  COMPROMISO               // Al aprobar o crear una Requisición
+  EJERCICIO                // Al convertir a Compra o CxP
+  LIBERACION_COMPROMISO    // Rollback (Rechazo/Anulación) de Requisición
+  LIBERACION_EJERCICIO     // Rollback (Anulación) de Compra
+  AJUSTE_MANUAL            // Para correcciones de auditoría
+}
+
+model PeriodoPresupuestal {
+  id            Int             @id @default(autoincrement())
+  nombre        String          // Ej. "Enero 2026", "Q1 2026"
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  estado        EstadoPeriodo   @default(ABIERTO)
+  
+  presupuestos  Presupuesto[]
+
+  creadoEn      DateTime        @default(now())
+  actualizadoEn DateTime        @updatedAt
+}
+
+model CentroCosto {
+  id            Int             @id @default(autoincrement())
+  codigo        String?          @unique // Ej. "TI-001", "MKT-002"
+  nombre        String          // Ej. "Sistemas", "Marketing"
+  activo        Boolean         @default(true) // <-- Cambio de 'estado' a 'activo'
+  // Relación con tu tabla actual: Sucursal
+  sucursalId    Int
+  sucursal      Sucursal        @relation(fields: [sucursalId], references: [id])
+
+  presupuestos  Presupuesto[]
+  requisiciones Requisicion[]   // Back-relation
+  compras       Compra[]        // Back-relation
+
+  creadoEn      DateTime        @default(now())
+  actualizadoEn DateTime        @updatedAt
+
+  @@index([sucursalId])
+}
+
+model PartidaPresupuestal {
+  id            Int             @id @default(autoincrement())
+  codigo        String          @unique // Ej. "5100-PAP"
+  nombre        String          // Ej. "Papelería", "Equipo de Cómputo"
+  descripcion   String?
+  estado        Boolean         @default(true)
+
+  presupuestos  Presupuesto[]
+  
+  // Relaciones a tus catálogos actuales
+  categorias    Categoria[]     
+  productos     Producto[]      
+
+  creadoEn      DateTime        @default(now())
+  actualizadoEn DateTime        @updatedAt
+}
+
+model Presupuesto {
+  id                  Int                 @id @default(autoincrement())
+  
+  periodoId           Int
+  periodo             PeriodoPresupuestal @relation(fields: [periodoId], references: [id], onDelete: Restrict)
+  
+  centroCostoId       Int
+  centroCosto         CentroCosto         @relation(fields: [centroCostoId], references: [id], onDelete: Restrict)
+  
+  partidaId           Int
+  partida             PartidaPresupuestal @relation(fields: [partidaId], references: [id], onDelete: Restrict)
+
+  montoAsignado       Float               @default(0) // El total autorizado inicialmente
+  montoComprometido   Float               @default(0) // Apartado en Requisiciones
+  montoEjercido       Float               @default(0) // Gastado en Compras reales
+  montoDisponible     Float               @default(0) // Asignado - Comprometido - Ejercido
+
+  movimientos         MovimientoPresupuesto[]
+
+  creadoEn            DateTime            @default(now())
+  actualizadoEn       DateTime            @updatedAt
+
+  // Índice Único: Evita que se cree dos veces el mismo presupuesto para la misma área y mes
+  @@unique([periodoId, centroCostoId, partidaId]) 
+}
+
+model MovimientoPresupuesto {
+  id                Int                       @id @default(autoincrement())
+  
+  presupuestoId     Int
+  presupuesto       Presupuesto               @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  tipoMovimiento    TipoMovimientoPresupuesto
+  monto             Float                     // El valor de la transacción
+  descripcion       String?                   // Ej. "Compromiso por Req #104"
+
+  // Trazabilidad (Rollbacks y Auditoría) - Enlazado a tus tablas actuales
+  requisicionId     Int?
+  requisicion       Requisicion?              @relation(fields: [requisicionId], references: [id], onDelete: SetNull)
+
+  compraId          Int?
+  compra            Compra?                   @relation(fields: [compraId], references: [id], onDelete: SetNull)
+
+  usuarioId         Int?                      // El usuario de tu sistema que disparó el movimiento
+  usuario           Usuario?                  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  fechaMovimiento   DateTime                  @default(now())
+
+  @@index([presupuestoId])
+  @@index([requisicionId])
+  @@index([compraId])
+}
+
+
+
+
+
+
+
+
 enum TipoPlantillaLegal {
   CONTRATO
   PAGARE
 }
-
 
 model VentaCuotaHistorial {
   id           Int        @id @default(autoincrement())

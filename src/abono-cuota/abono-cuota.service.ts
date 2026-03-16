@@ -11,13 +11,17 @@ import { Prisma, EstadoPago, EstadoCuota, AccionCredito } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAbonoCuotaDto } from './dto/create-abono-cuota.dto';
 import { DeleteAbonoCuotaDto } from './dto/delete-cuota';
+import { MetasService } from 'src/metas/metas.service';
 
 @Injectable()
 export class AbonoCuotaService {
   private readonly logger = new Logger(AbonoCuotaService.name);
   private readonly EPS = 0.005;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly metaRepo: MetasService,
+  ) {}
 
   // ===== Helpers numéricos y de fechas =====
   private sum(arr: number[] = []) {
@@ -460,6 +464,13 @@ export class AbonoCuotaService {
             },
           },
         });
+
+        await this.metaRepo.incrementarMetaTx(
+          tx,
+          dto.usuarioId,
+          dto.montoTotal,
+          'tienda',
+        );
 
         this.logger.log(
           `cajaAdicion :\n${JSON.stringify(movimientoMF, null, 2)}`,

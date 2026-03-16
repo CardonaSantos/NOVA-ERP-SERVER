@@ -80,6 +80,11 @@ import { PayloadProductosModuleModule } from './payload-productos-module/payload
 import { BotFunctionsModule } from './bot-functions/bot-functions.module';
 import { ExcelReportsModule } from './excel-reports/excel-reports.module';
 import { PlantillaLegalCreditoModule } from './plantilla-legal-credito/plantilla-legal-credito.module';
+import { PresupuestosModule } from './control-presupuestal/presupuestos/presupuestos.module';
+import { MovimientosModule } from './control-presupuestal/movimientos/movimientos.module';
+import { CentrosCostoModule } from './control-presupuestal/centros-costo/centros-costo.module';
+import { PartidasModule } from './control-presupuestal/partidas/partidas.module';
+import { PeriodosModule } from './control-presupuestal/periodos/periodos.module';
 
 @Module({
   imports: [
@@ -162,6 +167,11 @@ import { PlantillaLegalCreditoModule } from './plantilla-legal-credito/plantilla
     BotFunctionsModule,
     ExcelReportsModule,
     PlantillaLegalCreditoModule,
+    PresupuestosModule,
+    MovimientosModule,
+    CentrosCostoModule,
+    PartidasModule,
+    PeriodosModule,
   ],
   controllers: [AppController],
   providers: [AppService, CloudinaryProvider, SaldosServiceService],
