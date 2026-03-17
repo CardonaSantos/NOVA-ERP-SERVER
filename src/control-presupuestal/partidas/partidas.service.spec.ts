@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PartidasService } from './partidas.service';
+import { PartidasService } from './app/partidas.service';
 
 describe('PartidasService', () => {
   let service: PartidasService;

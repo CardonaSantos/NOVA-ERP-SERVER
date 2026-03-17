@@ -1,4 +1,11 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreatePartidaDto } from './create-partida.dto';
+import { IsBoolean, IsOptional } from 'class-validator';
+import { CreatePartidaPresupuestalDto } from './create-partida.dto';
 
-export class UpdatePartidaDto extends PartialType(CreatePartidaDto) {}
+export class UpdatePartidaDto extends PartialType(
+  CreatePartidaPresupuestalDto,
+) {
+  @IsBoolean()
+  @IsOptional()
+  activo?: boolean;
+}

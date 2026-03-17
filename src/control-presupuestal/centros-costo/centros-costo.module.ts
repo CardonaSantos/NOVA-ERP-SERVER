@@ -1,9 +1,19 @@
 import { Module } from '@nestjs/common';
-import { CentrosCostoService } from './centros-costo.service';
-import { CentrosCostoController } from './centros-costo.controller';
+import { CentrosCostoController } from './presentation/centros-costo.controller';
+import { CentrosCostoService } from './app/centros-costo.service';
+import { PrismaModule } from 'src/prisma/prisma.module';
+import { CENTRO_COSTO_REPOSITORY } from './domain/centro-costo.repository';
+import { PrismaCentroCostoRepository } from './infraestructure/prisma-centro-costo.repository';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [CentrosCostoController],
-  providers: [CentrosCostoService],
+  providers: [
+    CentrosCostoService,
+    {
+      provide: CENTRO_COSTO_REPOSITORY,
+      useClass: PrismaCentroCostoRepository,
+    },
+  ],
 })
 export class CentrosCostoModule {}

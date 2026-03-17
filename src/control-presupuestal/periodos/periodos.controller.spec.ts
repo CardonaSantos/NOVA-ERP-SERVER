@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PeriodosController } from './periodos.controller';
-import { PeriodosService } from './periodos.service';
+import { PeriodosController } from './presentation/periodos.controller';
+import { PeriodosService } from './app/periodos.service';
 
 describe('PeriodosController', () => {
   let controller: PeriodosController;

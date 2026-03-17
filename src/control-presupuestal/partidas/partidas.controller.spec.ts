@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PartidasController } from './partidas.controller';
-import { PartidasService } from './partidas.service';
+import { PartidasController } from './presentation/partidas.controller';
+import { PartidasService } from './app/partidas.service';
 
 describe('PartidasController', () => {
   let controller: PartidasController;
