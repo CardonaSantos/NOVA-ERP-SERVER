@@ -2,7 +2,9 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { PartidadPresupuestalMapper } from '../common/PartidaPresupuestalMapper';
 import { PartidaRepository } from '../domain/partida.repository';
 import { PartidaPresupuestal } from '../entities/partida.entity';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export class PrismaPartidaRepository implements PartidaRepository {
   constructor(private readonly prisma: PrismaService) {}
 

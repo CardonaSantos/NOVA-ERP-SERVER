@@ -42,8 +42,7 @@ export class PresupuestoMapper {
       montoComprometido: entity.getMontoComprometido(),
       montoEjercido: entity.getMontoEjercido(),
 
-      // Le pedimos a la entidad su cálculo exacto
-      // y lo guardamos como un campo físico en Prisma.
+      // la entidad su cálculo exacto
       montoDisponible: entity.montoDisponible,
     };
   }

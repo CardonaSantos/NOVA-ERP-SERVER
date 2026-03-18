@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MovimientosController } from './movimientos.controller';
+import { MovimientosController } from './presentation/movimientos.controller';
 import { MovimientosService } from './movimientos.service';
 
 describe('MovimientosController', () => {

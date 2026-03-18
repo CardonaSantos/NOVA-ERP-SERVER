@@ -53,6 +53,20 @@ export class Presupuesto {
     );
   }
 
+  public liberarCompromiso(monto: number): void {
+    if (monto <= 0) {
+      throw new Error('El monto a liberar debe ser mayor a cero.');
+    }
+
+    if (monto > this.montoComprometido) {
+      throw new Error(
+        `No se puede liberar ${monto} porque solo hay ${this.montoComprometido} comprometido.`,
+      );
+    }
+
+    this.montoComprometido = this.round(this.montoComprometido - monto);
+  }
+
   public ampliarPresupuesto(cantidad: number): void {
     if (cantidad <= 0)
       throw new Error('La ampliación debe ser una cantidad positiva.');

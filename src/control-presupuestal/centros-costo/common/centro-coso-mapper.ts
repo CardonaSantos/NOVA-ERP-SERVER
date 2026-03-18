@@ -50,7 +50,7 @@ export class CentroCostoMapper {
     }
 
     return {
-      id: entity.getId(),
+      id: entity.getId() || undefined,
       nombre: entity.getNombre(),
       codigo: entity.getCodigo(),
       sucursalId: entity.getSucursalId(),

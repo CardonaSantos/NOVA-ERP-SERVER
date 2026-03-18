@@ -1,4 +1,5 @@
 import { Presupuesto } from '../entities/presupuesto.entity';
+import { PresupuestoDetalleView } from '../interfaces/interfaces-view';
 
 // 1. EL TOKEN DE INYECCIÓN
 // Usamos Symbol para garantizar que sea único en todo el contenedor de dependencias de NestJS
@@ -17,6 +18,8 @@ export interface PresupuestoRepository {
   ): Promise<Presupuesto | null>;
 
   findAll(): Promise<Presupuesto[]>;
-
+  findAllDetalles(): Promise<PresupuestoDetalleView[]>;
   delete(id: number): Promise<void>;
+
+  findDetalleById(id: number): Promise<PresupuestoDetalleView | null>;
 }

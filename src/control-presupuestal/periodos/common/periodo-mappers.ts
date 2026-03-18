@@ -34,7 +34,7 @@ export class PeriodoMapper {
     entity: PeriodoPresupuestal,
   ): Prisma.PeriodoPresupuestalUncheckedCreateInput {
     return {
-      id: entity.getId(),
+      id: entity.getId() || undefined,
       nombre: entity.getNombre(),
       fechaInicio: dateUtils(entity.getFechaInicio()).toDate(),
       fechaFin: dateUtils(entity.getFin()).toDate(),

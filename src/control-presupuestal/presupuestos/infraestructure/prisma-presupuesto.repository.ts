@@ -3,10 +3,31 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { PresupuestoRepository } from '../domain/presupuesto.repository';
 import { Presupuesto } from '../entities/presupuesto.entity';
 import { PresupuestoMapper } from '../common/mappers';
+import { PresupuestoDetalleView } from '../interfaces/interfaces-view';
+import { dateUtils } from 'src/utils/dateUtils';
+import { mapToDetalleView } from '../common/map';
 
 @Injectable()
 export class PrismaPresupuestoRepository implements PresupuestoRepository {
   private readonly logger = new Logger(PrismaPresupuestoRepository.name);
+  private readonly INCLUDE_LISTA = {
+    periodo: true,
+    partida: true,
+    centroCosto: { include: { sucursal: true } },
+  };
+
+  // Include profundo para un solo registro (Con todo el historial)
+  private readonly INCLUDE_DETALLE = {
+    ...this.INCLUDE_LISTA,
+    movimientos: {
+      include: {
+        requisicion: true,
+        compra: true,
+        usuario: true,
+      },
+      orderBy: { fechaMovimiento: 'desc' as const },
+    },
+  };
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -91,5 +112,20 @@ export class PrismaPresupuestoRepository implements PresupuestoRepository {
       );
       throw error;
     }
+  }
+
+  async findDetalleById(id: number): Promise<PresupuestoDetalleView | null> {
+    const record = await this.prisma.presupuesto.findUnique({
+      where: { id },
+      include: this.INCLUDE_DETALLE,
+    });
+    return record ? mapToDetalleView(record) : null;
+  }
+
+  async findAllDetalles(): Promise<PresupuestoDetalleView[]> {
+    const records = await this.prisma.presupuesto.findMany({
+      include: this.INCLUDE_LISTA,
+    });
+    return records.map((record) => mapToDetalleView(record));
   }
 }

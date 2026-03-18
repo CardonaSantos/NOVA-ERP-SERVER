@@ -75,8 +75,8 @@ export class PartidaPresupuestal {
   }
 
   private validateCodigo(codigo: string): void {
-    const regex = /^[A-Z0-9]+-[A-Z0-9]+$/i;
-    if (!codigo || !regex.test(codigo)) {
+    // const regex = /^[A-Z0-9]+-[A-Z0-9]+$/i;
+    if (!codigo) {
       throw new Error(
         'El código de la partida debe tener el formato XXXX-YYY (Ej. 5100-PAP).',
       );
