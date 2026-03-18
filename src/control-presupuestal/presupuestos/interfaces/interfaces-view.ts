@@ -6,12 +6,22 @@ export interface PresupuestoDetalleView {
   montoDisponible: number;
 
   // Metadatos
-  periodo: string; // "Marzo 2026"
-  centroCosto: string; // "Sistemas"
+  periodo: {
+    fechaInicio: string;
+    fechaFin: string;
+    estado: string;
+    nombre: string;
+  }; // "Marzo 2026"
+  centroCosto: {
+    codigo: string;
+    nombre: string;
+    activo: boolean;
+  }; // "Sistemas"
   sucursal: string; // "Central Norte"
   partida: {
     codigo: string;
     nombre: string;
+    descripcion: string;
   };
 
   // El historial detallado (Ledger)
