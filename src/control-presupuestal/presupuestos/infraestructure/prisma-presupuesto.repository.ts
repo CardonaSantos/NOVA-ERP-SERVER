@@ -128,4 +128,49 @@ export class PrismaPresupuestoRepository implements PresupuestoRepository {
     });
     return records.map((record) => mapToDetalleView(record));
   }
+
+  async findAllSelect() {
+    try {
+      const records = await this.prisma.presupuesto.findMany({
+        where: {
+          partida: {
+            estado: true,
+          },
+        },
+        select: {
+          id: true,
+          montoDisponible: true,
+          partida: {
+            select: {
+              id: true,
+              nombre: true,
+            },
+          },
+          periodo: {
+            select: {
+              fechaInicio: true,
+              fechaFin: true,
+            },
+          },
+        },
+      });
+
+      const recordsMapped =
+        records.length &&
+        records.map((r) => ({
+          id: r.id,
+          montoDisponible: r.montoDisponible,
+          partida: r.partida.nombre,
+          partidaId: r.partida.id,
+          fechaFin: r.periodo.fechaFin,
+          fechaInicio: r.periodo.fechaInicio,
+        }));
+      return recordsMapped;
+    } catch (error) {
+      this.logger.error(
+        `Error al listar Presupuestos to Select: ${error.message}`,
+      );
+      throw error;
+    }
+  }
 }

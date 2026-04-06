@@ -40,6 +40,11 @@ export class PresupuestosController {
     return await this.presupuestosService.obtenerTodos();
   }
 
+  @Get('select')
+  async obtenerTodosSelect() {
+    return await this.presupuestosService.obtenerTodosSelect();
+  }
+
   @Get('/details/:id')
   async obtenerDetalles(@Param('id', ParseIntPipe) id: number) {
     return await this.presupuestosService.obtenerDetalleCompleto(id);

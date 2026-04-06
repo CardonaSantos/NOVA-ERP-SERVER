@@ -1,4 +1,5 @@
 import { PartidaPresupuestal } from '../entities/partida.entity';
+import { PartidaSelect } from '../interfaces/select-interfaces';
 
 export const PARTIDA_REPOSITORY = Symbol('PARTIDA_REPOSITORY');
 
@@ -12,6 +13,7 @@ export interface PartidaRepository {
   // Devuelve todas las entidades mapeadas
   findAll(): Promise<PartidaPresupuestal[]>;
 
+  findAllSelect(): Promise<PartidaSelect[]>;
   // El update en el repositorio suele recibir la entidad ya modificada
   // o los campos necesarios, pero NUNCA un DTO.
   update(partida: PartidaPresupuestal): Promise<PartidaPresupuestal>;

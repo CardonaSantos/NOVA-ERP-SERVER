@@ -3,6 +3,7 @@ import { PartidadPresupuestalMapper } from '../common/PartidaPresupuestalMapper'
 import { PartidaRepository } from '../domain/partida.repository';
 import { PartidaPresupuestal } from '../entities/partida.entity';
 import { Injectable } from '@nestjs/common';
+import { PartidaSelect } from '../interfaces/select-interfaces';
 
 @Injectable()
 export class PrismaPartidaRepository implements PartidaRepository {
@@ -59,6 +60,30 @@ export class PrismaPartidaRepository implements PartidaRepository {
     try {
       const records = await this.prisma.partidaPresupuestal.findMany();
       return PartidadPresupuestalMapper.toDomainList(records);
+    } catch (error) {
+      throw new Error(`No se pudo encontrar los registros de partida.`);
+    }
+  }
+
+  async findAllSelect(): Promise<Array<PartidaSelect>> {
+    try {
+      const records = await this.prisma.partidaPresupuestal.findMany({
+        where: {
+          estado: true,
+        },
+        select: {
+          id: true,
+          nombre: true,
+          creadoEn: true,
+          presupuestos: {
+            select: {
+              montoDisponible: true,
+            },
+          },
+        },
+      });
+
+      return records;
     } catch (error) {
       throw new Error(`No se pudo encontrar los registros de partida.`);
     }

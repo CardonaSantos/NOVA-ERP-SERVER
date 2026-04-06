@@ -31,6 +31,11 @@ export class PartidasController {
     return await this.partidasService.findAll();
   }
 
+  @Get('select')
+  async obtenerTodasSelect() {
+    return await this.partidasService.findAllSelect();
+  }
+
   @Get(':id')
   async obtenerPorId(@Param('id', ParseIntPipe) id: number) {
     return await this.partidasService.findOne(id);

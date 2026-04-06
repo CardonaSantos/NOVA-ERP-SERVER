@@ -13,7 +13,10 @@ import { CreatePresupuestoDto } from '../dto/create-presupuesto.dto';
 import { UpdatePresupuestoDto } from '../dto/update-presupuesto.dto';
 import { Presupuesto } from '../entities/presupuesto.entity';
 import { ErrorHandler } from 'src/utils/error_handler';
-import { PresupuestoDetalleView } from '../interfaces/interfaces-view';
+import {
+  PresupuestoDetalleView,
+  PresupuestosPartidasSelect,
+} from '../interfaces/interfaces-view';
 import { MovimientosService } from 'src/control-presupuestal/movimientos/app/movimientos.service';
 import { TipoMovimientoPresupuesto } from 'src/control-presupuestal/movimientos/interfaces/interfaces';
 import { LiberarSaldoDto } from '../dto/liberate-compromiso';
@@ -80,6 +83,14 @@ export class PresupuestosService {
   async obtenerTodos(): Promise<PresupuestoDetalleView[]> {
     try {
       return await this.repoPresupuesto.findAllDetalles();
+    } catch (error) {
+      ErrorHandler.handle(error);
+    }
+  }
+
+  async obtenerTodosSelect(): Promise<Array<PresupuestosPartidasSelect>> {
+    try {
+      return await this.repoPresupuesto.findAllSelect();
     } catch (error) {
       ErrorHandler.handle(error);
     }

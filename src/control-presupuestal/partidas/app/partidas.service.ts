@@ -6,6 +6,7 @@ import {
 } from '../domain/partida.repository';
 import { PartidaPresupuestal } from '../entities/partida.entity';
 import { CreatePartidaPresupuestalDto } from '../dto/create-partida.dto';
+import { PartidaSelect } from '../interfaces/select-interfaces';
 
 @Injectable()
 export class PartidasService {
@@ -34,6 +35,10 @@ export class PartidasService {
 
   async findAll(): Promise<PartidaPresupuestal[]> {
     return await this.repoPartida.findAll();
+  }
+
+  async findAllSelect(): Promise<PartidaSelect[]> {
+    return await this.repoPartida.findAllSelect();
   }
 
   async findOne(id: number): Promise<PartidaPresupuestal> {

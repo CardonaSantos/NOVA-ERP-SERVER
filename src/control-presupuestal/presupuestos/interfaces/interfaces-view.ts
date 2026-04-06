@@ -35,3 +35,12 @@ export interface PresupuestoDetalleView {
     referencia: string; // "REQ-003" o "OC-10" o "N/A"
   }>;
 }
+
+export interface PresupuestosPartidasSelect {
+  id: number;
+  montoDisponible: number;
+  partida: string;
+  partidaId: number;
+  fechaFin: Date;
+  fechaInicio: Date;
+}
