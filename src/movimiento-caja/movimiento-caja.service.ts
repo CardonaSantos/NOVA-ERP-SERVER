@@ -1,30 +1,7 @@
-import {
-  BadRequestException,
-  HttpException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
-import { CreateMovimientoCajaDto } from './dto/create-movimiento-caja.dto';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import { MovimientoCajaItem } from './interface';
 import { UtilidadesService } from 'src/caja/utilidades/utilidades.service';
 import { CajaService } from 'src/caja/caja.service';
-import { TZGT } from 'src/utils/utils';
-import { DepositoCierreDto } from './dto/deposito-cierre-caja';
-import { EstadoTurnoCaja, Prisma } from '@prisma/client';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 @Injectable()
 export class MovimientoCajaService {

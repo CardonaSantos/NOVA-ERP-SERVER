@@ -5,28 +5,20 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateStockDto, StockEntryDTO } from './dto/create-stock.dto';
+import { StockEntryDTO } from './dto/create-stock.dto';
 import { UpdateStockDto } from './dto/update-stock.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateEntregaStockDto } from 'src/entrega-stock/dto/create-entrega-stock.dto';
 import { AjusteStockService } from 'src/ajuste-stock/ajuste-stock.service';
 import { DeleteStockDto } from './dto/delete-stock.dto';
-import * as dayjs from 'dayjs';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import 'dayjs/locale/es-mx';
 import { HistorialStockTrackerService } from 'src/historial-stock-tracker/historial-stock-tracker.service';
-import { TypeOperationStockTracker } from 'src/historial-stock-tracker/utils';
-import { StockKindEnum, UpdateStockDatesDto } from './update-stock-dates';
 import {
   StockToEditPresentacion,
   StockToEditProducto,
   StockToEditResponse,
 } from './stock-edit.dto';
 
-dayjs.extend(utc);
-dayjs.locale('es-mx');
-dayjs.extend(timezone);
+import { dayjs } from 'src/utils/dayjs';
+import { StockKindEnum, UpdateStockDatesDto } from './update-stock-dates';
 
 @Injectable()
 export class StockService {

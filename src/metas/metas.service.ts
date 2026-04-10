@@ -13,6 +13,7 @@ import { CreateMetaUsuarioDto } from './dto/MetaUsuarioDTO.dto';
 import { CreateMetaCobrosDto } from './dto/MetaCobrosDTO.dto';
 import { CreateDepositoCobroDto } from './dto/DepositoCobroDTO.dto';
 import * as bcrypt from 'bcryptjs';
+
 import { UpdateMetaCobroDto } from './dto/update-meta-cobro.dto';
 import { EstadoMetaCobro, EstadoMetaTienda, Prisma } from '@prisma/client';
 @Injectable()
@@ -56,14 +57,21 @@ export class MetasService {
 
       console.log('La nueva meta es: ', newGoalToUser);
       return newGoalToUser;
-    } catch (error) {
-      if (error.code === 'P2002') {
-        throw new ConflictException(
-          'La meta ya existe para este usuario y sucursal',
+    } catch (error: unknown) {
+      console.error('Error:', error);
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new BadRequestException(
+          'No se encontró el depósito o la meta asociada.',
         );
       }
-      console.error(error);
-      throw new BadRequestException('Error al crear la meta para el usuario');
+
+      throw new BadRequestException(
+        'Error al eliminar el depósito y actualizar la meta.',
+      );
     }
   }
 
@@ -104,7 +112,12 @@ export class MetasService {
       console.log('El nuevo registro de meta para cobros es: ', newMetaCobros);
       return newMetaCobros;
     } catch (error) {
-      if (error.code === 'P2002') {
+      console.error('Error:', error);
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException(
           'Ya existe una meta para este usuario en esta sucursal con los mismos parámetros',
         );
@@ -347,7 +360,10 @@ export class MetasService {
     } catch (error) {
       console.error('Error al crear nuevo pago:', error);
 
-      if (error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new BadRequestException(
           'No se encontró la meta asociada al ID proporcionado.',
         );
@@ -519,7 +535,10 @@ export class MetasService {
       console.error('Error al eliminar depósito y actualizar la meta:', error);
 
       // Manejo específico de errores de Prisma
-      if (error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new BadRequestException(
           'No se encontró el depósito o la meta asociada.',
         );

@@ -7,27 +7,31 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+
 import { CreateRequisicionDto } from './dto/create-requisicion.dto';
 import { UpdateRequisicionDto } from './dto/update-requisicion.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+
 import {
   CreateRequisitionDto,
   RequisitionResponse,
   StockAlertItem,
 } from './utils';
+
 import { UpdateRequisitionDto } from './dto/update-requisiciones.dto';
 
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { Prisma } from '@prisma/client';
 import { RequisitionProductCandidate } from './interfaces/requisicionProductCandidate';
 import { GetV2Args, PagedResponse } from './interfaces/newInterfacesPaginacion';
 import { RequisicionLineasDTO } from './interfaces/requiscionWithPresentaciones';
 import { TZGT } from 'src/utils/utils';
+import dayjs = require('dayjs');
+import 'dayjs/locale/es';
+import utc = require('dayjs/plugin/utc');
+import timezone = require('dayjs/plugin/timezone');
+import isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
+import isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(isSameOrBefore);
@@ -188,8 +192,6 @@ export class RequisicionService {
           ],
         }
       : {};
-
-    this.logger.log('el where dinamico es: ', whereProducto);
 
     // ===== 2) Traer productos filtrados (ids) y total =====
     const [productos, total] = await this.prisma.$transaction([

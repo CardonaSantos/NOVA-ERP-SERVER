@@ -8,13 +8,7 @@ import {
 import { CreateCreditoAutorizationDto } from './dto/create-credito-autorization.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { verifyProps } from 'src/utils/verifyPropsFromDTO';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import * as customParseFormat from 'dayjs/plugin/customParseFormat';
+import { dayjs } from 'src/utils/dayjs';
 import { TZGT } from 'src/utils/utils';
 import { selectCreditAutorization } from './helpers/select';
 import { Prisma } from '@prisma/client';
@@ -30,12 +24,6 @@ import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimient
 import { CreateMFUtility } from 'src/movimiento-financiero/utilities/createMFDto';
 import { RejectCreditoAuth } from './dto/reject-credito';
 import { NotificationService } from 'src/notification/notification.service';
-dayjs.extend(customParseFormat);
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + (Number(b) || 0), 0);
 
@@ -251,7 +239,7 @@ export class CreditoAutorizationService {
       this.logger.log('[CreditoAutorizationService] Autorización creada OK');
       return createdId;
     } catch (error) {
-      this.logger.error('Error en create autorizacion:', error?.stack || error);
+      this.logger.error('Error en create autorizacion:', error || error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal error: Error inesperado en módulo autorizacion',
@@ -998,10 +986,7 @@ export class CreditoAutorizationService {
         data,
       };
     } catch (error) {
-      this.logger.error(
-        'Error en módulo GET autorizaciones: ',
-        error?.stack || error,
-      );
+      this.logger.error('Error en módulo GET autorizaciones: ', error || error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal error: Error inesperado en módulo autorizacion',
@@ -1061,7 +1046,7 @@ export class CreditoAutorizationService {
         };
       });
     } catch (error) {
-      this.logger.error('Error en módulo crédito (rechazo): ', error?.stack);
+      this.logger.error('Error en módulo crédito (rechazo): ', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal error: Error inesperado en rechazo de crédito',

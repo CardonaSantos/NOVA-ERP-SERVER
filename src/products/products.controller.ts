@@ -33,6 +33,7 @@ import { plainToInstance } from 'class-transformer';
 import { validateOrReject } from 'class-validator';
 import { QueryParamsInventariado } from './query/query';
 import { newQueryDTO } from './query/newQuery';
+import type { Multer } from 'multer';
 
 // ---- DTOS del payload que esperas en tu servicio ----
 interface PrecioProductoDto {

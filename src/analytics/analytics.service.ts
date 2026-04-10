@@ -8,12 +8,7 @@ import {
 import { CreateAnalyticsDto } from './dto/create-analytics.dto';
 import { UpdateAnalyticsDto } from './dto/update-analytics.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-
-import * as dayjs from 'dayjs';
-import * as utc from 'dayjs/plugin/utc';
-import * as tz from 'dayjs/plugin/timezone';
-dayjs.extend(utc);
-dayjs.extend(tz);
+import { dayjs } from 'src/utils/dayjs';
 
 @Injectable()
 export class AnalyticsService {

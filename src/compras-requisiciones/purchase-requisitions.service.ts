@@ -10,12 +10,7 @@ import {
 import { CreatePurchaseRequisitionDto } from './dto/create-purchase-requisition.dto';
 import { UpdatePurchaseRequisitionDto } from './dto/update-purchase-requisition.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
 import { TZGT } from 'src/utils/utils';
 import {
   CostoVentaTipo,
@@ -37,52 +32,14 @@ import { HistorialStockTrackerService } from 'src/historial-stock-tracker/histor
 import { RecepcionarCompraAutoDto } from './dto/compra-recepcion.dto';
 import { StockBaseDto, StockPresentacionDto } from './interfaces';
 import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimiento-financiero.service';
-import { CrearMovimientoDto } from 'src/movimiento-financiero/dto/crear-movimiento.dto';
-import { CreateMFUtility } from 'src/movimiento-financiero/utilities/createMFDto';
 import { ProrrateoService } from 'src/prorrateo/prorrateo.service';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
+import { PresupuestosService } from 'src/control-presupuestal/presupuestos/app/presupuestos.service';
+import { dayjs } from 'src/utils/dayjs';
+
 const N = (x: any) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 
-// Tipo de transacción (ya lo usas)
-type Tx = Prisma.TransactionClient;
-
 const MONEY_DECIMALS = 4; // totales
-const UNIT_DECIMALS = 6; // precioCosto unitario
 const round = (n: number, d: number) => Number(n.toFixed(d));
-
-interface dtoGenerateRegistProrrato {
-  sucursalId: number;
-  compraId: number;
-  entregaStockId: number;
-  requisicionRecepcionId: number;
-  newStockIds: number[];
-
-  newStocksPresIds: number[];
-  gastosAsociadosCompra: number; //fletes, gasolina, etc. Un solo monto
-  movimientoFinancieroId: number;
-  comentario?: string | null;
-}
-
-type DtoGenProrrateo = {
-  sucursalId: number;
-  // Modo A (Recepción):
-  compraRecepcionId?: number;
-  // Modo B (Lotes nuevos):
-  newStockIds?: number[]; // Stock.id (producto base)
-  newStocksPresIds?: number[]; // StockPresentacion.id
-
-  gastosAsociadosCompra: number; // G
-  movimientoFinancieroId?: number; // idempotencia
-  comentario?: string;
-
-  // Opcionales de trazabilidad (recomendado pasarlos si los tienes)
-  compraId?: number | null;
-  entregaStockId?: number | null;
-};
 
 @Injectable()
 export class PurchaseRequisitionsService {
@@ -95,6 +52,7 @@ export class PurchaseRequisitionsService {
 
     private readonly tracker: HistorialStockTrackerService,
     private readonly prorrateo: ProrrateoService,
+    private readonly presupuestoService: PresupuestosService,
   ) {}
 
   create(createPurchaseRequisitionDto: CreatePurchaseRequisitionDto) {
@@ -889,6 +847,12 @@ export class PurchaseRequisitionsService {
               },
             },
             proveedor: { select: { id: true } },
+            requisicion: {
+              select: {
+                id: true,
+                presupuestoId: true,
+              },
+            },
             pedido: {
               select: {
                 id: true,
@@ -1474,6 +1438,16 @@ export class PurchaseRequisitionsService {
           }
         }
 
+        if (compra.requisicion.presupuestoId) {
+          await this.presupuestoService.ejercerSaldo(
+            compra.requisicion.presupuestoId,
+            totalCompra,
+            compra.id,
+            dto.usuarioId,
+            tx,
+          );
+        }
+
         return {
           ok: true,
           compra: {
@@ -1615,20 +1589,18 @@ export class PurchaseRequisitionsService {
   }
 
   /**
-   * Crea una Compra (origen: REQUISICION) a partir de la requisición dada.
-   * - Mantiene tu patrón: cabecera con total=0 -> detalles en loop -> recálculo total -> update.
-   * - Ahora soporta presentaciones: si la RequisicionLinea trae presentacionId, el detalle la conecta.
+   *
    */
   async createCompraFromRequisiciones(
     createPurchaseRequisitionDto: CreatePurchaseRequisitionDto,
-    opts?: { proveedorId?: number; sucursalId?: number }, // sigue opcional por compatibilidad; usamos DTO.proveedorId como fuente principal
+    opts?: { proveedorId?: number; sucursalId?: number },
   ) {
     try {
       this.logger.log('La data del envio es: ', createPurchaseRequisitionDto);
       const { requisicionID, userID, proveedorId } =
         createPurchaseRequisitionDto;
 
-      return await this.prisma.$transaction(async (tx) => {
+      const recordCreated = await this.prisma.$transaction(async (tx) => {
         const existing = await tx.compra.findFirst({
           where: { requisicionId: requisicionID },
           include: { detalles: true },
@@ -1762,6 +1734,31 @@ export class PurchaseRequisitionsService {
           },
         });
         this.logger.log('El registro de compra creado es: ', compraCreated);
+
+        if (createPurchaseRequisitionDto.presupuestoId) {
+          await this.presupuestoService.comprometerSaldo(
+            createPurchaseRequisitionDto.presupuestoId,
+            total,
+            req.id,
+            userID,
+            tx,
+          );
+
+          if (!req.presupuestoId) {
+            await tx.requisicion.update({
+              where: { id: createPurchaseRequisitionDto.requisicionID },
+              data: {
+                presupuestoId: createPurchaseRequisitionDto.presupuestoId,
+              },
+            });
+          } else if (
+            req.presupuestoId !== createPurchaseRequisitionDto.requisicionID
+          ) {
+            throw new BadRequestException(
+              `La requisición ${createPurchaseRequisitionDto.requisicionID} ya está ligada a otro presupuesto (${req.presupuestoId})`,
+            );
+          }
+        }
 
         // 9) Respuesta enriquecida
         return tx.compra.findUnique({

@@ -1,4 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { dayjs } from 'src/utils/dayjs';
 
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
@@ -6,7 +7,6 @@ import * as ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 // import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import * as dayjs from 'dayjs';
 
 // import { utcToZonedTime } from "date-fns-tz";
 

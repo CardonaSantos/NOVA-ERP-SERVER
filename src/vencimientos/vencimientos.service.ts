@@ -7,26 +7,10 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationService } from 'src/notification/notification.service';
 import { NotiCategory, NotiSeverity, NotiAudience } from '@prisma/client';
-import * as dayjs from 'dayjs';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import 'dayjs/locale/es-mx';
 import { UpdateVencimientoDto } from './dto/update-vencimiento.dto';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.locale('es-mx');
-
+import { dayjs } from 'src/utils/dayjs';
 type StageKey = 'T-45' | 'T-30' | 'T-15' | 'T-7' | 'EXPIRED';
-
 const TZ = 'America/Guatemala';
-const THRESHOLDS: Array<{ days: number; key: StageKey }> = [
-  { days: 45, key: 'T-45' },
-  { days: 30, key: 'T-30' },
-  { days: 15, key: 'T-15' },
-  { days: 7, key: 'T-7' },
-  { days: 0, key: 'EXPIRED' },
-];
 
 function formatFechaGT(fecha: Date) {
   return dayjs(fecha).tz(TZ, true).format('D [de] MMMM [de] YYYY');
@@ -75,7 +59,7 @@ export class VencimientosService {
     try {
       await this.scanAndNotify();
     } catch (err) {
-      this.logger.error('Fallo en cron de vencimientos', err?.stack ?? err);
+      this.logger.error('Fallo en cron de vencimientos', err);
     }
   }
 

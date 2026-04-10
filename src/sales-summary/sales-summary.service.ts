@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -9,17 +8,9 @@ import { CreateSalesSummaryDto } from './dto/create-sales-summary.dto';
 import { UpdateSalesSummaryDto } from './dto/update-sales-summary.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ResumenPeriodo } from '@prisma/client';
-import * as dayjs from 'dayjs';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isoWeek from 'dayjs/plugin/isoWeek';
 import { CreateAutoSummary } from './dto/create-auto.dto';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isoWeek);
+import { dayjs } from 'src/utils/dayjs';
 const ZONA = 'America/Guatemala';
-const Formato = 'YYYY-MM-DD';
 
 const formattDate = (value: string | Date) => {
   return dayjs(value).tz(ZONA).format('DD-MM-YYYY');

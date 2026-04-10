@@ -6,19 +6,24 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "paths": {
-      "prisma/*": ["./prisma/*"] // Asegúrate de que las rutas se resuelvan desde la raíz del proyecto
+      "*": ["./*"], // <-- ESTA ES LA MAGIA: Reemplaza al baseUrl
+      "src/*": ["./src/*"], // <-- Le dice a TS dónde encontrar tus importaciones de 'src/...'
+      "prisma/*": ["./prisma/*"]
     },
+
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true
   }
 }

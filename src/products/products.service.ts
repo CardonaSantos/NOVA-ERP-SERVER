@@ -32,21 +32,13 @@ import {
   StocksBySucursal,
   StocksProducto,
 } from './ResponseInterface';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+
+import { dayjs } from 'src/utils/dayjs';
+
 import { newQueryDTO } from './query/newQuery';
 import { verifyProps } from 'src/utils/verifyPropsFromDTO';
 import { buildSearchForPresentacion, buildSearchForProducto } from './HELPERS';
 import { itemsBase } from './seed/utils';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 const toDecimal = (value: string | number) => {
   return new Prisma.Decimal(value);
@@ -421,7 +413,7 @@ export class ProductsService {
         },
       };
     } catch (error) {
-      this.logger.error('Error generado en get productos POS: ', error?.stack);
+      this.logger.error('Error generado en get productos POS: ', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal Error: Error inesperado en modulo de productos',
@@ -826,7 +818,7 @@ export class ProductsService {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException({
         message: 'Error inesperado',
-        details: error?.message,
+        details: error,
       });
     }
   }
@@ -1161,7 +1153,7 @@ export class ProductsService {
     } catch (error) {
       this.logger.error(
         'El error generado en get de productos y presentaciones es: ',
-        error?.stack,
+        error,
       );
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
@@ -1433,10 +1425,7 @@ export class ProductsService {
         where: { id: productId },
       });
     } catch (error) {
-      this.logger.error(
-        'Error en módulo de productos-get edición: ',
-        error?.stack,
-      );
+      this.logger.error('Error en módulo de productos-get edición: ', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Fatal error: Error inesperado');
     }

@@ -221,7 +221,7 @@ export class CreditoService {
       const creditoNormalizado = creditNormalizado.shift();
       return creditoNormalizado;
     } catch (error) {
-      this.logger.error('Error al conseguir registro de crédito', error?.stack);
+      this.logger.error('Error al conseguir registro de crédito', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Fatal errror: Error inesperado');
     }
@@ -243,7 +243,7 @@ export class CreditoService {
       const formatteds = simpleCreditNormalizer(credits);
       return formatteds;
     } catch (error) {
-      this.logger.error('Error en módulo de credito-get: ', error?.stack);
+      this.logger.error('Error en módulo de credito-get: ', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Fatal Error: Error inesperado');
     }
@@ -262,7 +262,7 @@ export class CreditoService {
 
       return { ok: true, id: deleted.id };
     } catch (error) {
-      this.logger.error('Error generado es: ', error?.stack);
+      this.logger.error('Error generado es: ', error);
 
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

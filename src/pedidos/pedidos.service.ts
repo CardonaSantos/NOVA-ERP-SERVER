@@ -8,25 +8,14 @@ import {
 } from '@nestjs/common';
 import { CreatePedidoDto } from './dto/create-pedido.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { dayjs } from 'src/utils/dayjs';
 import { TZGT } from 'src/utils/utils';
 import { GetPedidosQueryDto } from './Querys/getPedidosQuery.dto';
 import { Prisma } from '@prisma/client';
 import { GetProductosToPedidosQuery } from './Querys/get-pedidos-query.dto';
 import { UpdatePedidoDto } from './dto/update-pedidos.dto';
 import { ReceivePedidoComprasDto } from './dto/sendPedidoToCompras';
-import { text } from 'stream/consumers';
 import { TipoLinea } from './dto/create-pedido-linea';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 type StockPorSucursal = {
   sucursalId: number;

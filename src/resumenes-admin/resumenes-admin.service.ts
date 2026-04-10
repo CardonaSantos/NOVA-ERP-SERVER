@@ -4,25 +4,12 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { CreateResumenesAdminDto } from './dto/create-resumenes-admin.dto';
-import { UpdateResumenesAdminDto } from './dto/update-resumenes-admin.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { transformAuthInfo } from 'passport';
 import { dayBounds, n } from 'src/cron-snapshoot/helpers';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { dayjs } from 'src/utils/dayjs';
 import { TZGT } from 'src/utils/utils';
 import { ResumenDiarioAdminResponse } from './interfaces';
 import { MotivoMovimiento, Prisma } from '@prisma/client';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 const num = (v: any) => Number(v ?? 0);
 type DayWindow = { inicio: Date; fin: Date; dayStr: string };

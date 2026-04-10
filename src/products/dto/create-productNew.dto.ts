@@ -113,7 +113,6 @@ export class CreateNewProductDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(1000)
   descripcion?: string | null;
 
   // ✔ precios a nivel producto
@@ -144,9 +143,6 @@ export class CreateNewProductDto {
   @Min(0)
   stockMinimo?: number | null;
 
-  // ❌ No incluimos imágenes aquí; van como archivos en el controller.
-
-  // ✔ varias presentaciones
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -156,5 +152,5 @@ export class CreateNewProductDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  tipoPresentacionId?: number | null; // ✅ para Producto (nullable)
+  tipoPresentacionId?: number | null;
 }

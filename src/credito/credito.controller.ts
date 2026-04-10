@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { CreditoService } from './credito.service';
 import { CreateCreditoDto } from './dto/create-credito.dto';
-import { UpdateCreditoDto } from './dto/update-credito.dto';
 import { CreditoQuery } from './query/query';
 
 @UsePipes(

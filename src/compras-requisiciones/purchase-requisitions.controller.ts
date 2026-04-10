@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import { PurchaseRequisitionsService } from './purchase-requisitions.service';
 import { CreatePurchaseRequisitionDto } from './dto/create-purchase-requisition.dto';
@@ -18,6 +19,7 @@ import { RecepcionarCompraAutoDto } from './dto/compra-recepcion.dto';
 
 @Controller('compra-requisicion')
 export class PurchaseRequisitionsController {
+  private readonly logger = new Logger(PurchaseRequisitionsController.name);
   constructor(
     private readonly purchaseRequisitionsService: PurchaseRequisitionsService,
   ) {}
@@ -31,6 +33,9 @@ export class PurchaseRequisitionsController {
   generateCompraFromRequisicion(
     @Body() createPurchaseRequisitionDto: CreatePurchaseRequisitionDto,
   ) {
+    this.logger.log(
+      `DTO recibido:\n${JSON.stringify(createPurchaseRequisitionDto, null, 2)}`,
+    );
     return this.purchaseRequisitionsService.createCompraFromRequisiciones(
       createPurchaseRequisitionDto,
     );

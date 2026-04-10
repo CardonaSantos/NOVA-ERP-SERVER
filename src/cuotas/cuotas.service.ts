@@ -21,22 +21,11 @@ import { DeleteCuotaPaymentDTO } from './dto/delete-one-payment-cuota.dto';
 import { TZGT } from 'src/utils/utils';
 import { CajaService } from 'src/caja/caja.service';
 import { MetasService } from 'src/metas/metas.service';
+import { dayjs } from 'src/utils/dayjs';
 import * as bcrypt from 'bcryptjs';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimiento-financiero.service';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 import { Prisma } from '@prisma/client';
 
-// Líneas separadas con tipo firme
 type LineaProducto = {
   tipo: Tipo.PRODUCTO;
   productoId: number;

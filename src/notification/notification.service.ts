@@ -217,7 +217,7 @@ export class NotificationService {
     } catch (error) {
       this.logger.error(
         'Error generado en modulo de notificaciones-eliminacion: ',
-        error?.stack,
+        error,
       );
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Fatal Error: Error inesperado');
@@ -232,7 +232,7 @@ export class NotificationService {
     } catch (error) {
       this.logger.error(
         'Error generado en eliminación de notificaciones: ',
-        error?.stack,
+        error,
       );
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
