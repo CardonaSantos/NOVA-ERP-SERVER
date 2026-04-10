@@ -1,23 +1,5 @@
-import { CreateResumenDiaDto } from './dto/create-resumen-dia.dto';
-import { UpdateResumenDiaDto } from './dto/update-resumen-dia.dto';
-import { ResumenDiarioResponse, ResumenDiarioSucursal } from './types';
 import { PrismaService } from 'src/prisma/prisma.service';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { UtilidadesService } from 'src/caja/utilidades/utilidades.service';
-import { TZGT } from 'src/utils/utils';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
-type Q = { fecha?: string; sucursalId?: number | string };
-
-// caja-admin.service.ts
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
 type QDiario = { fecha?: string; sucursalId?: number };

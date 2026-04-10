@@ -6,38 +6,14 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  CreateCompraDto,
-  ItemDetallesPayloadParcial,
-} from './dto/create-compra.dto';
-import { UpdateCompraDto } from './dto/update-compra.dto';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { CreateCompraDto } from './dto/create-compra.dto';
+import { dayjs } from 'src/utils/dayjs';
 import { TZGT } from 'src/utils/utils';
 import { EstadoCompra, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ProrrateoService } from 'src/prorrateo/prorrateo.service';
 import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimiento-financiero.service';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
-type TipoItem = 'PRODUCTO' | 'PRESENTACION';
 
-interface StockLineaPayload {
-  lineaId: number;
-  productoId: number;
-  presentacionId: number;
-  cantidad: number;
-  fechaVencimiento?: string | null;
-}
-
-// helpers de payload (pueden ir arriba del service)
 type StockLineaPresentacionPayload = {
   lineaId: number;
   productoId: number;

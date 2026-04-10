@@ -32,44 +32,29 @@ export class PrismaCentroCostoRepository implements CentroCostoRepository {
   }
 
   async delete(id: number): Promise<void> {
-    try {
-      await this.prisma.centroCosto.delete({
-        where: { id },
-      });
-    } catch (error) {
-      this.logger.error(
-        `Error al eliminar Centro de Costo ${id}: ${error.message}`,
-      );
-      throw new Error(`No se pudo eliminar el recurso con ID ${id}`);
-    }
+    await this.prisma.centroCosto.delete({
+      where: { id },
+    });
   }
 
   async findAll(): Promise<Array<CentroCosto>> {
-    try {
-      const records = await this.prisma.centroCosto.findMany({
-        where: {},
-      });
+    const records = await this.prisma.centroCosto.findMany({
+      where: {},
+    });
 
-      return CentroCostoMapper.toDomainList(records);
-    } catch (error) {
-      throw new Error(error);
-    }
+    return CentroCostoMapper.toDomainList(records);
   }
 
   async update(centroCosto: CentroCosto): Promise<CentroCosto> {
-    try {
-      const recordUpdated = await this.prisma.centroCosto.update({
-        where: {
-          id: centroCosto.getId(),
-        },
-        data: {
-          ...CentroCostoMapper.toPersistence(centroCosto),
-        },
-      });
+    const recordUpdated = await this.prisma.centroCosto.update({
+      where: {
+        id: centroCosto.getId(),
+      },
+      data: {
+        ...CentroCostoMapper.toPersistence(centroCosto),
+      },
+    });
 
-      return CentroCostoMapper.toDomain(recordUpdated);
-    } catch (error) {
-      throw new Error(error);
-    }
+    return CentroCostoMapper.toDomain(recordUpdated);
   }
 }

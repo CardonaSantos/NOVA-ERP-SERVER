@@ -1,18 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { CreateCajaAdministrativoDto } from './dto/create-caja-administrativo.dto';
-import { UpdateCajaAdministrativoDto } from './dto/update-caja-administrativo.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CapitalInicialQueryDto,
   CapitalInicialResponse,
 } from './dto/capital-inicial.dto';
 import { TZGT } from 'src/utils/utils';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { dayjs } from 'src/utils/dayjs';
 import {
   CostoAsociadoTipo,
   CV_Detalle,
@@ -29,17 +22,10 @@ import {
   ResumenPeriodoFlujo,
 } from './interfaces';
 import { CostoVentaTipo, GastoOperativoTipo } from '@prisma/client';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
-type R = number;
 function N(v: any): number {
   if (v == null) return 0;
   if (typeof v === 'number') return v;
-  // Prisma.Decimal: toString() es seguro para Number() si montos razonables
   if (typeof v.toString === 'function') return Number(v.toString());
   return Number(v) || 0;
 }

@@ -1,21 +1,8 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { CreateCronSnapshootDto } from './dto/create-cron-snapshoot.dto';
-import { UpdateCronSnapshootDto } from './dto/update-cron-snapshoot.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { dayBounds, n } from './helpers';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { dayjs } from 'src/utils/dayjs';
 import { TZGT } from 'src/utils/utils';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 @Injectable()
 export class CronSnapshootService {

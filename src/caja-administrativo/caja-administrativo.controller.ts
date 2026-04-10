@@ -1,30 +1,14 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
   Query,
   ParseIntPipe,
   BadRequestException,
 } from '@nestjs/common';
 import { CajaAdministrativoService } from './caja-administrativo.service';
-import { CreateCajaAdministrativoDto } from './dto/create-caja-administrativo.dto';
-import { UpdateCajaAdministrativoDto } from './dto/update-caja-administrativo.dto';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { dayjs } from 'src/utils/dayjs';
 import { TZGT } from 'src/utils/utils';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 @Controller('caja-administrativo')
 export class CajaAdministrativoController {

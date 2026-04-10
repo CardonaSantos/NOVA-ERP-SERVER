@@ -10,12 +10,6 @@ import { UpdateWarrantyDto } from './dto/update-warranty.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RegistroGarantiaDto } from './dto/create-regist-warranty.dto';
 
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { HistorialStockTrackerService } from 'src/historial-stock-tracker/historial-stock-tracker.service';
 import {
   EstadoDetalleVenta,
@@ -25,11 +19,8 @@ import {
 } from '@prisma/client';
 import { GarantiaDto } from './interfaces';
 import { createNewTimeLimeDTO } from './dto-timeline/timelineCreateDTO.dto';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
+import { dayjs } from 'src/utils/dayjs';
+
 const estadosQueCierran = [
   EstadoGarantia.REPARADO,
   EstadoGarantia.REEMPLAZADO,

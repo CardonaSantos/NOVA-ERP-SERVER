@@ -51,7 +51,7 @@ export class AuthService {
         access_token: this.jwtService.sign(payload),
       };
     } catch (error) {
-      this.logger.error('Error generado en login auth: ', error.stak);
+      this.logger.error('Error generado en login auth: ', error);
       throw new UnauthorizedException('Credenciales incorrectas');
     }
   }
@@ -86,7 +86,7 @@ export class AuthService {
         access_token: token,
       };
     } catch (error) {
-      this.logger.error('Error al registrar usuario: ', error.stack);
+      this.logger.error('Error al registrar usuario: ', error);
       throw new BadRequestException(
         'Error inesperado en registrar usuario modulo',
       );

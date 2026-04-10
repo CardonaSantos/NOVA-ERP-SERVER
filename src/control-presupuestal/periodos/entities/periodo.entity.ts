@@ -1,5 +1,4 @@
-import { error } from 'console';
-import { dateUtils } from 'src/utils/dateUtils';
+import { dayjs } from 'src/utils/dayjs';
 
 export enum EstadoPeriodo {
   ABIERTO = 'ABIERTO',
@@ -59,8 +58,8 @@ export class PeriodoPresupuestal {
     this.nombre = newName.trim();
   }
   private validateFechas(inicio: string, fin: string) {
-    const start = dateUtils(inicio);
-    const end = dateUtils(fin);
+    const start = dayjs(inicio);
+    const end = dayjs(fin);
 
     if (!start.isValid() || !end.isValid()) {
       throw new Error('Formato de fecha no válido');

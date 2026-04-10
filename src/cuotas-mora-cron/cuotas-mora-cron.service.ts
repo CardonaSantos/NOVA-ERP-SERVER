@@ -3,25 +3,14 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import * as customParseFormat from 'dayjs/plugin/customParseFormat';
+import { dayjs } from 'src/utils/dayjs';
+
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Cron } from '@nestjs/schedule';
 import { NotiSeverity } from '@prisma/client';
 import { SelectCreditosActivos } from './select/selectCredito';
 import { TZGT } from 'src/utils/utils';
 import { NotificationService } from 'src/notification/notification.service';
-dayjs.extend(customParseFormat);
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 @Injectable()
 export class CuotasMoraCronService {
@@ -51,7 +40,7 @@ export class CuotasMoraCronService {
         await this.processCredito(credito);
       }
     } catch (error) {
-      this.logger.error('Cron mora (daily) falló', error?.stack);
+      this.logger.error('Cron mora (daily) falló', error);
       throw new InternalServerErrorException('Cron mora: error inesperado');
     }
   }

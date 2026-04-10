@@ -6,17 +6,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { CreateHistorialStockTrackerDto } from './dto/create-historial-stock-tracker.dto';
-import { UpdateHistorialStockTrackerDto } from './dto/update-historial-stock-tracker.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { TypeOperationStockTracker } from './utils';
-import * as dayjs from 'dayjs';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
 import { Prisma, TipoMovimientoStock } from '@prisma/client';
 import { CreateRequisicionRecepcionLineaDto } from 'src/recepcion-requisiciones/dto/requisicion-recepcion-create.dto';
-import { SoloIDProductos } from 'src/recepcion-requisiciones/dto/create-venta-tracker.dto';
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import { dayjs } from 'src/utils/dayjs';
 
 @Injectable()
 export class HistorialStockTrackerService {

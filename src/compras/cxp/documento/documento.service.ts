@@ -8,22 +8,10 @@ import {
 } from '@nestjs/common';
 import { CreateDocumentoDto, PlanCuotaFila } from './dto/create-documento.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import * as customParseFormat from 'dayjs/plugin/customParseFormat';
+import { dayjs } from 'src/utils/dayjs';
+
 import { TZGT } from 'src/utils/utils';
-import {
-  CondicionPago,
-  CxPCuota,
-  CxPDocumento,
-  CxPPago,
-  CxPPagoCuota,
-  Prisma,
-} from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimiento-financiero.service';
 import { CreateMFUtility } from 'src/movimiento-financiero/utilities/createMFDto';
 import { CreditFromCompraTypes, selectCreditoFromCompra } from './selects';
@@ -31,12 +19,6 @@ import {
   normalizarCreditoFromCompra,
   UICreditoCompra,
 } from './helpers/normalizer';
-dayjs.extend(customParseFormat);
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 /**
  * NOTAS DE DISEÑO
@@ -311,10 +293,7 @@ export class DocumentoService {
 
       return result;
     } catch (error) {
-      this.logger.error(
-        'Error al crear crédito de compra',
-        error?.stack || error,
-      );
+      this.logger.error('Error al crear crédito de compra', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Error inesperado al crear el crédito.',

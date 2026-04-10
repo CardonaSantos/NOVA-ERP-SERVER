@@ -6,14 +6,14 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    // "esModuleInterop": true,
+    "esModuleInterop": true,
     "target": "ES2021",
     "sourceMap": true,
+    "ignoreDeprecations": "6.0",
     "outDir": "./dist",
     "baseUrl": "./",
-    "ignoreDeprecations": "5.0",
     "paths": {
-      "prisma/*": ["./prisma/*"] // Asegúrate de que las rutas se resuelvan desde la raíz del proyecto
+      "prisma/*": ["./prisma/*"]
     },
     "incremental": true,
     "skipLibCheck": true,
@@ -21,6 +21,8 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true
   }
 }

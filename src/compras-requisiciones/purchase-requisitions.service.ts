@@ -34,19 +34,7 @@ import { StockBaseDto, StockPresentacionDto } from './interfaces';
 import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimiento-financiero.service';
 import { ProrrateoService } from 'src/prorrateo/prorrateo.service';
 import { PresupuestosService } from 'src/control-presupuestal/presupuestos/app/presupuestos.service';
-
-import dayjs = require('dayjs');
-import 'dayjs/locale/es'; // Este se queda igual
-import utc = require('dayjs/plugin/utc');
-import timezone = require('dayjs/plugin/timezone');
-import isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
-import isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
-import customParseFormat = require('dayjs/plugin/customParseFormat'); // Si lo usas en el gateway
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
+import { dayjs } from 'src/utils/dayjs';
 
 const N = (x: any) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 

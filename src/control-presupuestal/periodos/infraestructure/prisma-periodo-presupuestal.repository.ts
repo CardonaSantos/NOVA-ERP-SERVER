@@ -9,58 +9,42 @@ export class PrismaPeriodoPresupuestal implements PeriodoRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async save(periodo: PeriodoPresupuestal): Promise<PeriodoPresupuestal> {
-    try {
-      const data = PeriodoMapper.toPersistence(periodo);
-      const id = periodo.getId();
-      const record = await this.prisma.periodoPresupuestal.upsert({
-        where: {
-          id,
-        },
-        create: {
-          ...data,
-        },
-        update: {
-          ...data,
-        },
-      });
+    const data = PeriodoMapper.toPersistence(periodo);
+    const id = periodo.getId();
+    const record = await this.prisma.periodoPresupuestal.upsert({
+      where: {
+        id,
+      },
+      create: {
+        ...data,
+      },
+      update: {
+        ...data,
+      },
+    });
 
-      return PeriodoMapper.toDomain(record);
-    } catch (error) {
-      throw new Error(error);
-    }
+    return PeriodoMapper.toDomain(record);
   }
 
   async delete(id: number) {
-    try {
-      await this.prisma.periodoPresupuestal.delete({
-        where: {
-          id,
-        },
-      });
-    } catch (error) {
-      throw new Error(error);
-    }
+    await this.prisma.periodoPresupuestal.delete({
+      where: {
+        id,
+      },
+    });
   }
 
   async findAll(): Promise<Array<PeriodoPresupuestal>> {
-    try {
-      const records = await this.prisma.periodoPresupuestal.findMany({});
-      return PeriodoMapper.toDomainList(records);
-    } catch (error) {
-      throw new Error(error);
-    }
+    const records = await this.prisma.periodoPresupuestal.findMany({});
+    return PeriodoMapper.toDomainList(records);
   }
   async findById(id: number): Promise<PeriodoPresupuestal> {
-    try {
-      const record = await this.prisma.periodoPresupuestal.findUnique({
-        where: {
-          id,
-        },
-      });
+    const record = await this.prisma.periodoPresupuestal.findUnique({
+      where: {
+        id,
+      },
+    });
 
-      return PeriodoMapper.toDomain(record);
-    } catch (error) {
-      throw new Error(error);
-    }
+    return PeriodoMapper.toDomain(record);
   }
 }

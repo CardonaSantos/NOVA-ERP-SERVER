@@ -15,15 +15,8 @@ import {
   MotivoMovimiento,
   Prisma,
 } from '@prisma/client';
-import { IniciarCaja } from './dto/open-regist.dto';
-import { CerrarCaja } from './dto/cerrar-caja.dto';
-import { CajaAbierta } from './dataTrsansfer/interfaces';
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { dayjs } from 'src/utils/dayjs';
+
 import { VentaLigadaACajaDTO } from './dto/new-dto';
 import { IniciarCajaDto } from './dto/iniciar-caja.dto';
 import { GetCajasQueryDto } from './GetCajasQueryDto ';
@@ -34,11 +27,7 @@ import {
   metodoPagoFromComprobante,
   toComprobanteNumero,
 } from './utils/helpers';
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
+
 type Paginated<T> = {
   total: number;
   page: number;

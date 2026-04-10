@@ -30,8 +30,8 @@ export class PrismaMovimientoRepository implements MovimientoRepository {
       return MovimientoMapper.toDomain(record);
     } catch (error) {
       this.logger.error(
-        `Error al registrar movimiento financiero: ${error.message}`,
-        error.stack,
+        `Error al registrar movimiento financiero: ${error}`,
+        error,
       );
       throw error;
     }
@@ -49,7 +49,7 @@ export class PrismaMovimientoRepository implements MovimientoRepository {
       return MovimientoMapper.toDomainList(records);
     } catch (error) {
       this.logger.error(
-        `Error al buscar movimientos del presupuesto ${presupuestoId}: ${error.message}`,
+        `Error al buscar movimientos del presupuesto ${presupuestoId}: ${error}`,
       );
       throw error;
     }
@@ -71,7 +71,7 @@ export class PrismaMovimientoRepository implements MovimientoRepository {
       return MovimientoMapper.toDomain(record);
     } catch (error) {
       this.logger.error(
-        `Error al buscar compromiso por requisición ${requisicionId}: ${error.message}`,
+        `Error al buscar compromiso por requisición ${requisicionId}: ${error}`,
       );
       throw error;
     }
@@ -127,7 +127,13 @@ export class PrismaMovimientoRepository implements MovimientoRepository {
         totalPages: Math.ceil(total / pageSize),
       };
     } catch (error) {
-      this.logger.error(`Error en findForTable: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      // 2. Lo pasamos al logger
+      this.logger.error(`Error en findForTable: ${errorMessage}`);
+
+      // 3. Dejamos q
       throw error;
     }
   }

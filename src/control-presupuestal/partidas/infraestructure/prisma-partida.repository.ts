@@ -10,31 +10,27 @@ export class PrismaPartidaRepository implements PartidaRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async save(partida: PartidaPresupuestal): Promise<PartidaPresupuestal> {
-    try {
-      const persistence = PartidadPresupuestalMapper.toPersistence(partida);
+    const persistence = PartidadPresupuestalMapper.toPersistence(partida);
 
-      let recordSaved;
+    let recordSaved;
 
-      if (partida.getId() > 0) {
-        recordSaved = await this.prisma.partidaPresupuestal.update({
-          where: { id: partida.getId() },
-          data: {
-            ...persistence,
-            id: undefined,
-          },
-        });
-      } else {
-        recordSaved = await this.prisma.partidaPresupuestal.create({
-          data: {
-            ...persistence,
-            id: undefined,
-          },
-        });
-      }
-      return PartidadPresupuestalMapper.toDomain(recordSaved);
-    } catch (error) {
-      throw new Error(error);
+    if (partida.getId() > 0) {
+      recordSaved = await this.prisma.partidaPresupuestal.update({
+        where: { id: partida.getId() },
+        data: {
+          ...persistence,
+          id: undefined,
+        },
+      });
+    } else {
+      recordSaved = await this.prisma.partidaPresupuestal.create({
+        data: {
+          ...persistence,
+          id: undefined,
+        },
+      });
     }
+    return PartidadPresupuestalMapper.toDomain(recordSaved);
   }
 
   async findById(id: number): Promise<PartidaPresupuestal | null> {

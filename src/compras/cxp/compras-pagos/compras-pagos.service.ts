@@ -5,20 +5,12 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { UpdateComprasPagoDto } from './dto/update-compras-pago.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { dayjs } from 'src/utils/dayjs';
 
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import * as customParseFormat from 'dayjs/plugin/customParseFormat';
 import { TZGT } from 'src/utils/utils';
 import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimiento-financiero.service';
-import { CxPCuota, Prisma } from '@prisma/client';
-import { RegistroCaja } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { DeletePagoCuota } from './dto/delete-pago-cuota';
 import { verifyProps } from 'src/utils/verifyPropsFromDTO';
 import {
@@ -26,12 +18,6 @@ import {
   CreateRecepcionItemDto,
 } from './dto/create-compras-pago.dto';
 import { ProrrateoService } from 'src/prorrateo/prorrateo.service';
-dayjs.extend(customParseFormat);
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
 
 @Injectable()
 export class ComprasPagosService {
@@ -358,10 +344,7 @@ export class ComprasPagosService {
 
       return result;
     } catch (error) {
-      this.logger.error(
-        'Error en modulo de pagos credito compras',
-        error?.stack,
-      );
+      this.logger.error('Error en modulo de pagos credito compras', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal error: Error inesperado en modulo pago de creditos compras',
@@ -542,7 +525,7 @@ export class ComprasPagosService {
         { isolationLevel: 'Serializable' },
       );
     } catch (error) {
-      this.logger.error('Error en eliminar pago de cuota: ', error?.stack);
+      this.logger.error('Error en eliminar pago de cuota: ', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal error: Error inesperado en módulo: eliminar pago de cuota',

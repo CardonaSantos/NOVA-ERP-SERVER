@@ -14,29 +14,15 @@ import { NotificationService } from 'src/notification/notification.service';
 import { NotificationToEmit } from 'src/web-sockets/Types/NotificationTypeSocket';
 import { EstadoPrecio, MetodoPago, Prisma, Rol } from '@prisma/client';
 import { HistorialStockTrackerService } from 'src/historial-stock-tracker/historial-stock-tracker.service';
-import { CreateRequisicionRecepcionLineaDto } from 'src/recepcion-requisiciones/dto/requisicion-recepcion-create.dto';
-import { SoloIDProductos } from 'src/recepcion-requisiciones/dto/create-venta-tracker.dto';
 import { CajaService } from 'src/caja/caja.service';
 import { SelectTypeVentas } from './select/selecSalesType';
 import { QueryVentasTable } from './query/queryTableVentas';
 import { normalizerVentas } from './helpers/normailizerVenta';
 import { normalizeVentaForPDF } from './helpers/venta-pdf.normalizer';
 // ===== Tipos auxiliares
-import * as dayjs from 'dayjs';
-import 'dayjs/locale/es';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
-import * as isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import * as customParseFormat from 'dayjs/plugin/customParseFormat';
 import { exigeCajaPorRolYMetodo } from './helper';
 import { MetasService } from 'src/metas/metas.service';
-dayjs.extend(customParseFormat);
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-dayjs.locale('es');
+import { dayjs } from 'src/utils/dayjs';
 
 type LineaProd = {
   productoId: number;

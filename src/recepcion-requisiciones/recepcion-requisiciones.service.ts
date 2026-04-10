@@ -12,16 +12,12 @@ import {
   CreateRequisicionRecepcionLineaDto,
 } from './dto/requisicion-recepcion-create.dto';
 import { UtilitiesService } from 'src/utilities/utilities.service';
-import * as dayjs from 'dayjs';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
+import { dayjs } from 'src/utils/dayjs';
 import { HistorialStockTracker } from 'src/historial-stock-tracker/entities/historial-stock-tracker.entity';
 import { HistorialStockTrackerService } from 'src/historial-stock-tracker/historial-stock-tracker.service';
 import { TypeOperationStockTracker } from 'src/historial-stock-tracker/utils';
 import { EntregaStockData } from 'src/utilities/utils';
 import { TipoMovimientoStock } from '@prisma/client';
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 @Injectable()
 export class RecepcionRequisicionesService {

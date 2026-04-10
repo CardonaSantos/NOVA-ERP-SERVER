@@ -1,4 +1,7 @@
-import * as currency from 'currency.js';
+import { dayjs } from 'src/utils/dayjs';
+
+import currency from 'currency.js';
+
 export function formattMonedaGT(value: number | string): string {
   return currency(value, {
     symbol: 'Q ',

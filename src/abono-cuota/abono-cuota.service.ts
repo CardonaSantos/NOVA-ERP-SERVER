@@ -490,7 +490,7 @@ export class AbonoCuotaService {
 
       return result;
     } catch (error) {
-      this.logger.error('Error en módulo abono cuotas:', error?.stack || error);
+      this.logger.error('Error en módulo abono cuotas:', error || error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal error: Error inesperado en módulo abonos',
@@ -690,7 +690,7 @@ export class AbonoCuotaService {
 
       return result;
     } catch (error) {
-      this.logger.error('Error eliminando abono:', error?.stack || error);
+      this.logger.error('Error eliminando abono:', error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Fatal error: Error inesperado eliminando abono.',

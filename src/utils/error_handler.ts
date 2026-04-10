@@ -272,7 +272,9 @@ export class ErrorHandler {
       const out: string[] = [];
       for (const ve of x) {
         if (ve.constraints) {
-          out.push(...Object.values(ve.constraints).map((v: string) => v));
+          out.push(
+            ...Object.values(ve.constraints).map((v: unknown) => String(v)),
+          );
         } else if (ve.children && ve.children.length) {
           out.push(...ErrorHandler.flattenClassValidator(ve.children));
         }

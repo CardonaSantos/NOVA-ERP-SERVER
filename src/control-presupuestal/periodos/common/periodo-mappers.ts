@@ -1,6 +1,6 @@
 import { Prisma, PeriodoPresupuestal as PrismaPeriodo } from '@prisma/client';
 import { EstadoPeriodo, PeriodoPresupuestal } from '../entities/periodo.entity';
-import { dateUtils } from 'src/utils/dateUtils';
+import { dayjs } from 'src/utils/dayjs';
 
 type PeriodoPresupuestalWithRelations = Prisma.PeriodoPresupuestalGetPayload<{
   include: {
@@ -36,8 +36,8 @@ export class PeriodoMapper {
     return {
       id: entity.getId() || undefined,
       nombre: entity.getNombre(),
-      fechaInicio: dateUtils(entity.getFechaInicio()).toDate(),
-      fechaFin: dateUtils(entity.getFin()).toDate(),
+      fechaInicio: dayjs(entity.getFechaInicio()).toDate(),
+      fechaFin: dayjs(entity.getFin()).toDate(),
       estado: entity.getEstado(),
     };
   }

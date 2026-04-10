@@ -7,16 +7,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationService } from 'src/notification/notification.service';
 import { NotiCategory, NotiSeverity, NotiAudience } from '@prisma/client';
-import * as dayjs from 'dayjs';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
-import 'dayjs/locale/es-mx';
 import { UpdateVencimientoDto } from './dto/update-vencimiento.dto';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.locale('es-mx');
-
+import { dayjs } from 'src/utils/dayjs';
 type StageKey = 'T-45' | 'T-30' | 'T-15' | 'T-7' | 'EXPIRED';
 
 const TZ = 'America/Guatemala';
@@ -75,7 +67,7 @@ export class VencimientosService {
     try {
       await this.scanAndNotify();
     } catch (err) {
-      this.logger.error('Fallo en cron de vencimientos', err?.stack ?? err);
+      this.logger.error('Fallo en cron de vencimientos', err);
     }
   }
 
