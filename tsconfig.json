@@ -9,12 +9,13 @@
     "esModuleInterop": true,
     "target": "ES2021",
     "sourceMap": true,
-    "ignoreDeprecations": "6.0",
     "outDir": "./dist",
-    "baseUrl": "./",
     "paths": {
+      "*": ["./*"], // <-- ESTA ES LA MAGIA: Reemplaza al baseUrl
+      "src/*": ["./src/*"], // <-- Le dice a TS dónde encontrar tus importaciones de 'src/...'
       "prisma/*": ["./prisma/*"]
     },
+
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,

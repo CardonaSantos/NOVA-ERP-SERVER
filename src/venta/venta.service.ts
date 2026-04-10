@@ -11,7 +11,6 @@ import { UpdateVentaDto } from './dto/update-venta.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ClientService } from 'src/client/client.service';
 import { NotificationService } from 'src/notification/notification.service';
-import { NotificationToEmit } from 'src/web-sockets/Types/NotificationTypeSocket';
 import { EstadoPrecio, MetodoPago, Prisma, Rol } from '@prisma/client';
 import { HistorialStockTrackerService } from 'src/historial-stock-tracker/historial-stock-tracker.service';
 import { CajaService } from 'src/caja/caja.service';

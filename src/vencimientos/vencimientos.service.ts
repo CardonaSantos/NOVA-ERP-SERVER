@@ -10,15 +10,7 @@ import { NotiCategory, NotiSeverity, NotiAudience } from '@prisma/client';
 import { UpdateVencimientoDto } from './dto/update-vencimiento.dto';
 import { dayjs } from 'src/utils/dayjs';
 type StageKey = 'T-45' | 'T-30' | 'T-15' | 'T-7' | 'EXPIRED';
-
 const TZ = 'America/Guatemala';
-const THRESHOLDS: Array<{ days: number; key: StageKey }> = [
-  { days: 45, key: 'T-45' },
-  { days: 30, key: 'T-30' },
-  { days: 15, key: 'T-15' },
-  { days: 7, key: 'T-7' },
-  { days: 0, key: 'EXPIRED' },
-];
 
 function formatFechaGT(fecha: Date) {
   return dayjs(fecha).tz(TZ, true).format('D [de] MMMM [de] YYYY');
