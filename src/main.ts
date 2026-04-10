@@ -7,7 +7,8 @@ async function bootstrap() {
   // comentario
   app.enableCors({
     origin: [
-      'https://erp-demo-3-ui-production.up.railway.app',
+      // 'https://erp-demo-3-ui-production.up.railway.app',
+      'https://nova-pos-erp.up.railway.app',
       'http://localhost:5174',
       'http://localhost:5173',
     ],
