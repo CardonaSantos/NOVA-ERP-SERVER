@@ -24,6 +24,11 @@ export const productoSelect = {
     },
   },
   stock: {
+    where: {
+      cantidad: {
+        gt: 0,
+      },
+    },
     select: {
       id: true,
       cantidad: true,

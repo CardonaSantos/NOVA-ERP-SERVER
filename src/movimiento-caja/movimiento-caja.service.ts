@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UtilidadesService } from 'src/caja/utilidades/utilidades.service';
 import { CajaService } from 'src/caja/caja.service';
@@ -199,7 +199,7 @@ export class MovimientoCajaService {
    */
   async getMovimientosPorCaja(cajaId: number) {
     // if (!cajaId) throw new BadRequestException('cajaId requerido');
-    // const items = await this.prisma.movimientoCaja.findMany({
+    // const items = await this.prisma.movimientoFinanciero.findMany({
     //   where: { registroCajaId: cajaId },
     //   orderBy: { fecha: 'desc' },
     //   select: {
