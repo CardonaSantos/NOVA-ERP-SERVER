@@ -834,7 +834,9 @@ export class CajaService {
     usuarioId?: number; // opcional para filtrar por quien abrió
   }) {
     const { registroCajaId, sucursalId, usuarioId } = params;
-
+    this.logger.log(
+      `EL PARAMS DEL GET DE LA CAJA AL CIERRE ES:\n${JSON.stringify(params, null, 2)}`,
+    );
     // 1) Resolver el turno
     let turno = null as null | {
       id: number;
@@ -1363,6 +1365,12 @@ export class CajaService {
           actualizadoEn: true,
           saldoInicial: true,
           usuarioInicioId: true,
+          usuarioInicio: {
+            select: {
+              id: true,
+              nombre: true,
+            },
+          },
         },
       });
 
@@ -1378,6 +1386,8 @@ export class CajaService {
           return {
             ...caja,
             disponibleEnCaja: saldosCaja.enCajaOperable,
+            // usuario: caja.usuarioInicio.nombre,
+            // usuarioId: caja.usuarioInicio.id,
           };
         }),
       );
