@@ -8,6 +8,8 @@ import { dayjs } from 'src/utils/dayjs';
 import { formattFechaWithMinutes } from 'src/utils/formattFecha';
 import { TZGT } from 'src/utils/utils';
 import { formattMonedaGT } from 'src/utils/formattMoneda';
+import { QueryReportCajas } from '../dto/query-cajas';
+import { parseDecimal } from 'src/utils/parseDecimal';
 
 @Injectable()
 export class PrismaReportsRepository implements ReportRepository {
@@ -262,7 +264,7 @@ export class PrismaReportsRepository implements ReportRepository {
             telefono,
             producto: producto.producto.nombre,
             codigo: producto.producto.codigoProducto,
-            metodo: metodos,
+            metodo: metodos.metodoPago,
             cantidad: producto.cantidad,
             pventa: producto.precioVenta,
             total: venta.totalVenta,
@@ -279,6 +281,297 @@ export class PrismaReportsRepository implements ReportRepository {
       });
       resumen.font = { bold: true };
       resumen.getCell('total').numFmt = '"Q"#,##0.00';
+    }
+
+    const buff = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buff);
+  }
+
+  /**
+   * REPORTE DE CAJAS
+   * @param query
+   */
+  async reporteCajas(query: QueryReportCajas): Promise<Buffer> {
+    const { ids } = query;
+
+    const records = await this.prisma.registroCaja.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        saldoInicial: true,
+        saldoFinal: true,
+        fechaApertura: true,
+        fechaCierre: true,
+        creadoEn: true,
+        estado: true,
+        usuarioInicio: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
+        movimientos: {
+          select: {
+            id: true,
+            motivo: true,
+            clasificacion: true,
+            creadoEn: true,
+            metodoPago: true,
+            descripcion: true,
+            gastoOperativoTipo: true,
+            costoVentaTipo: true,
+            deltaCaja: true,
+            deltaBanco: true,
+            cuentaBancaria: {
+              select: {
+                id: true,
+                banco: true,
+                alias: true,
+              },
+            },
+            referencia: true,
+          },
+        },
+        sucursal: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
+      },
+    });
+
+    const workbook = new Exeljs.Workbook();
+
+    const toNum = (value?: any) => {
+      const n = parseDecimal(value);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const formatDate = (value?: Date | string | null) =>
+      value ? formattFechaWithMinutes(value) : '-';
+
+    const safeSheetName = (name: string) =>
+      name
+        .replace(/[\\/?*\[\]:]/g, ' ')
+        .trim()
+        .slice(0, 31);
+
+    const resumenMovimientos = (
+      movs: (typeof records)[number]['movimientos'],
+    ) => {
+      return movs
+        .map((m) => {
+          const partes = [
+            `#${m.id}`,
+            m.clasificacion ?? '-',
+            m.motivo ?? '-',
+            m.metodoPago ?? '-',
+            m.cuentaBancaria
+              ? `${m.cuentaBancaria.banco} / ${m.cuentaBancaria.alias}`
+              : null,
+            m.referencia ? `Ref: ${m.referencia}` : null,
+            m.descripcion ? m.descripcion : null,
+          ].filter(Boolean);
+
+          return partes.join(' | ');
+        })
+        .join('\n');
+    };
+
+    const styleHeader = (ws: Exeljs.Worksheet) => {
+      ws.getRow(1).eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE9ECEF' },
+        };
+      });
+      ws.views = [{ state: 'frozen', ySplit: 1 }];
+      ws.autoFilter = {
+        from: 'A1',
+        to: ws.getRow(1).actualCellCount
+          ? ws.getCell(1, ws.getRow(1).actualCellCount).address
+          : 'A1',
+      };
+    };
+
+    const COLUMNS_CAJAS: Partial<Exeljs.Column>[] = [
+      { header: 'ID Caja', key: 'id', width: 10 },
+      { header: 'Sucursal', key: 'sucursal', width: 20 },
+      { header: 'Fecha Registro', key: 'fechaRegistro', width: 19 },
+      { header: 'Usuario', key: 'usuario', width: 22 },
+      { header: 'Saldo Inicial', key: 'saldoIn', width: 14 },
+      { header: 'Saldo Final', key: 'saldoFin', width: 14 },
+      { header: 'F. Apertura', key: 'fApertura', width: 19 },
+      { header: 'F. Cierre', key: 'fCierre', width: 19 },
+      { header: 'Estado', key: 'estado', width: 14 },
+      { header: 'Movimientos', key: 'movCount', width: 12 },
+      { header: 'Total Ingresos', key: 'ingresos', width: 14 },
+      { header: 'Egresos Operativos', key: 'egresosOperativos', width: 16 },
+      { header: 'Transferencias Banco', key: 'transferencias', width: 16 },
+      { header: 'Saldo Esperado', key: 'saldoEsperado', width: 14 },
+      { header: 'Diferencia', key: 'diferencia', width: 12 },
+      { header: 'Movimientos Resumen', key: 'movResumen', width: 45 },
+    ];
+
+    const COLUMNS_MOVS: Partial<Exeljs.Column>[] = [
+      { header: 'ID Caja', key: 'cajaId', width: 10 },
+      { header: 'Sucursal', key: 'sucursal', width: 20 },
+      { header: 'Estado Caja', key: 'estadoCaja', width: 14 },
+      { header: 'ID Movimiento', key: 'movId', width: 12 },
+      { header: 'Fecha', key: 'fecha', width: 19 },
+      { header: 'Motivo', key: 'motivo', width: 18 },
+      { header: 'Clasificación', key: 'clasificacion', width: 18 },
+      { header: 'Método Pago', key: 'metodoPago', width: 16 },
+      { header: 'Descripción', key: 'descripcion', width: 32 },
+      { header: 'Tipo Gasto', key: 'gastoTipo', width: 18 },
+      { header: 'Tipo Costo', key: 'costoTipo', width: 18 },
+      { header: 'Delta Caja', key: 'deltaCaja', width: 14 },
+      { header: 'Delta Banco', key: 'deltaBanco', width: 14 },
+      { header: 'Banco', key: 'banco', width: 18 },
+      { header: 'Alias Cuenta', key: 'aliasCuenta', width: 18 },
+      { header: 'Referencia', key: 'referencia', width: 18 },
+    ];
+
+    const porSucursal = records.reduce<Record<string, typeof records>>(
+      (acc, caja) => {
+        const key = caja.sucursal?.nombre ?? 'Sin sucursal';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(caja);
+        return acc;
+      },
+      {},
+    );
+
+    const sucursalesOrdenadas = Object.entries(porSucursal).sort(([a], [b]) =>
+      a.localeCompare(b, 'es'),
+    );
+
+    for (const [sucursalNombre, cajas] of sucursalesOrdenadas) {
+      const cajasOrdenadas = [...cajas].sort(
+        (a, b) =>
+          new Date(a.creadoEn).getTime() - new Date(b.creadoEn).getTime(),
+      );
+
+      const sheetCajas = workbook.addWorksheet(
+        safeSheetName(`${sucursalNombre} - Cajas`),
+      );
+      const sheetMovs = workbook.addWorksheet(
+        safeSheetName(`${sucursalNombre} - Movs`),
+      );
+
+      sheetCajas.columns = COLUMNS_CAJAS;
+      sheetMovs.columns = COLUMNS_MOVS;
+
+      styleHeader(sheetCajas);
+      styleHeader(sheetMovs);
+
+      for (const record of cajasOrdenadas) {
+        const movimientosOrdenados = [...record.movimientos].sort(
+          (a, b) =>
+            new Date(a.creadoEn).getTime() - new Date(b.creadoEn).getTime(),
+        );
+
+        const saldoInicial = toNum(record.saldoInicial);
+        const saldoFinal = toNum(record.saldoFinal);
+
+        const totalIngresos = movimientosOrdenados.reduce((acc, mov) => {
+          const deltaCaja = toNum(mov.deltaCaja);
+          return deltaCaja > 0 ? acc + deltaCaja : acc;
+        }, 0);
+
+        const egresosOperativos = movimientosOrdenados.reduce((acc, mov) => {
+          const deltaCaja = toNum(mov.deltaCaja);
+          const deltaBanco = toNum(mov.deltaBanco);
+          return deltaCaja < 0 && deltaBanco === 0
+            ? acc + Math.abs(deltaCaja)
+            : acc;
+        }, 0);
+
+        const transferenciasBanco = movimientosOrdenados.reduce((acc, mov) => {
+          const deltaBanco = toNum(mov.deltaBanco);
+          const deltaCaja = toNum(mov.deltaCaja);
+          return deltaBanco !== 0 ? acc + Math.abs(deltaCaja) : acc;
+        }, 0);
+
+        const saldoEsperado =
+          saldoInicial +
+          totalIngresos -
+          egresosOperativos -
+          transferenciasBanco;
+
+        const diferencia = saldoFinal - saldoEsperado;
+
+        sheetCajas.addRow({
+          id: record.id,
+          sucursal: record.sucursal?.nombre ?? 'Sin sucursal',
+          fechaRegistro: formatDate(record.creadoEn),
+          usuario: record.usuarioInicio?.nombre ?? 'N/A',
+          saldoIn: saldoInicial,
+          saldoFin: saldoFinal,
+          fApertura: formatDate(record.fechaApertura),
+          fCierre: formatDate(record.fechaCierre),
+          estado: record.estado ?? '-',
+          movCount: movimientosOrdenados.length,
+          ingresos: totalIngresos,
+          egresosOperativos,
+          transferencias: transferenciasBanco,
+          saldoEsperado,
+          diferencia,
+          movResumen: resumenMovimientos(movimientosOrdenados),
+        });
+
+        for (const mov of movimientosOrdenados) {
+          sheetMovs.addRow({
+            cajaId: record.id,
+            sucursal: record.sucursal?.nombre ?? 'Sin sucursal',
+            estadoCaja: record.estado ?? '-',
+            movId: mov.id,
+            fecha: mov.creadoEn ? new Date(mov.creadoEn) : null,
+            motivo: mov.motivo ?? '-',
+            clasificacion: mov.clasificacion ?? '-',
+            metodoPago: mov.metodoPago ?? '-',
+            descripcion: mov.descripcion ?? '-',
+            gastoTipo: mov.gastoOperativoTipo ?? '-',
+            costoTipo: mov.costoVentaTipo ?? '-',
+            deltaCaja: toNum(mov.deltaCaja),
+            deltaBanco: toNum(mov.deltaBanco),
+            banco: mov.cuentaBancaria?.banco ?? '-',
+            aliasCuenta: mov.cuentaBancaria?.alias ?? '-',
+            referencia: mov.referencia ?? '-',
+          });
+        }
+      }
+
+      sheetCajas.getColumn('saldoIn').numFmt = '"Q"#,##0.00';
+      sheetCajas.getColumn('saldoFin').numFmt = '"Q"#,##0.00';
+      sheetCajas.getColumn('ingresos').numFmt = '"Q"#,##0.00';
+      sheetCajas.getColumn('egresosOperativos').numFmt = '"Q"#,##0.00';
+      sheetCajas.getColumn('transferencias').numFmt = '"Q"#,##0.00';
+      sheetCajas.getColumn('saldoEsperado').numFmt = '"Q"#,##0.00';
+      sheetCajas.getColumn('diferencia').numFmt = '"Q"#,##0.00';
+
+      sheetMovs.getColumn('fecha').numFmt = 'dd/mm/yyyy hh:mm';
+      sheetMovs.getColumn('deltaCaja').numFmt = '"Q"#,##0.00';
+      sheetMovs.getColumn('deltaBanco').numFmt = '"Q"#,##0.00';
+
+      sheetCajas.getColumn('movResumen').alignment = {
+        wrapText: true,
+        vertical: 'top',
+      };
+      sheetMovs.getColumn('descripcion').alignment = {
+        wrapText: true,
+        vertical: 'top',
+      };
+
+      sheetCajas.addRow({});
+      const resumen = sheetCajas.addRow({
+        id: 'RESUMEN',
+        sucursal: `Cajas: ${cajasOrdenadas.length}`,
+      });
+      resumen.font = { bold: true };
     }
 
     const buff = await workbook.xlsx.writeBuffer();

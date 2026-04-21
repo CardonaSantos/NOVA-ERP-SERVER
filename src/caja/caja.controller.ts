@@ -20,11 +20,7 @@ import { CerrarCajaV3Dto } from './dto/CerrarCajaV3Dto';
 
 @Controller('caja')
 export class CajaController {
-  constructor(
-    private readonly cajaService: CajaService,
-
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly cajaService: CajaService) {}
 
   //ABRIR EL REGISTRO DE CAJA [TURNO]
   @Post('/iniciar-caja')
@@ -32,28 +28,15 @@ export class CajaController {
     return this.cajaService.iniciarCaja(createCajaDto);
   }
 
-  @Post('/cerrar-v2')
-  cerrarCajaAdvanced(@Body() dto: CerrarCajaV2Dto) {
-    // return this.cajaService.cerrarCajaV2(dto);
-  }
-
   @Post('/cerrar-v3')
   newCerrarCaja(@Body() dto: CerrarCajaV3Dto) {
     return this.cajaService.cerrarCajaV3(dto);
   }
 
-  //CERRAR LA CAJA
   @Patch('/cerrar-caja')
   create(@Body() dto: CerrarCajaV3Dto) {
     return this.cajaService.cerrarCajaV3(dto);
   }
-
-  // @Get('/get-ultimo-saldo-sucursal/:sucursalID')
-  // getUltimoSaldoSucursal(
-  //   @Param('sucursalID', ParseIntPipe) sucursalID: number,
-  // ) {
-  //   return this.cajaService.getUltimoSaldoSucursal(sucursalID);
-  // }
 
   @Get('/get-ultimo-saldo-usuario/:sucursalID/:userID')
   getUltimoSaldoUsuario(

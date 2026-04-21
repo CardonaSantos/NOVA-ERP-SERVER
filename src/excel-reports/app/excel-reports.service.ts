@@ -4,6 +4,7 @@ import {
   ReportRepository,
 } from '../domain/reports.repository';
 import { QueryReport } from '../dto/query';
+import { QueryReportCajas } from '../dto/query-cajas';
 
 @Injectable()
 export class ExcelReportsService {
@@ -18,5 +19,9 @@ export class ExcelReportsService {
 
   async reportVentas(query: QueryReport) {
     return await this.reportRepo.ventasHistorial(query);
+  }
+
+  async reportCajas(query: QueryReportCajas) {
+    return await this.reportRepo.reporteCajas(query);
   }
 }

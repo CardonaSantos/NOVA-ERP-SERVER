@@ -1,22 +1,30 @@
-// main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // comentario
+
   app.enableCors({
     origin: [
-      // 'https://erp-demo-3-ui-production.up.railway.app',
       'https://nova-pos-erp.up.railway.app',
       'http://localhost:5174',
       'http://localhost:5173',
     ],
-    credentials: true, // <- para cookies/withCredentials
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    // exposedHeaders: ['set-cookie'], // opcional
   });
+
+  // app.useGlobalPipes(
+  //   new ValidationPipe({
+  //     whitelist: true,
+  //     transform: true,
+  //     transformOptions: {
+  //       enableImplicitConversion: true,
+  //     },
+  //   }),
+  // );
 
   await app.listen(process.env.PORT || 3000);
 }

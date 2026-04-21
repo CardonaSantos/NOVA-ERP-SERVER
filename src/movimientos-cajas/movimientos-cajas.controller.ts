@@ -46,7 +46,7 @@ export class MovimientosCajasController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    // return this.movimientosCajasService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.movimientosCajasService.remove(+id);
   }
 }

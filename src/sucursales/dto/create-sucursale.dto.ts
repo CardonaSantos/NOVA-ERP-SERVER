@@ -21,7 +21,7 @@ export class CreateSucursaleDto {
   @IsString()
   direccion: string;
 
-  @IsPhoneNumber(null) // Puedes especificar el código de país si es necesario, por ejemplo, 'GT' para Guatemala
+  @IsString()
   telefono: string;
 
   @IsOptional()

@@ -1015,7 +1015,7 @@ export class CajaService {
 
     const whereCaja: Prisma.RegistroCajaWhereInput = {};
 
-    if (dto.sucursalId) whereCaja.sucursalId = dto.sucursalId;
+    // if (dto.sucursalId) whereCaja.sucursalId = Number(dto.sucursalId);
     if (dto.estado) whereCaja.estado = dto.estado as EstadoTurnoCaja;
 
     if (typeof dto.depositado === 'string') {
@@ -1230,7 +1230,15 @@ export class CajaService {
     };
   }
 
-  // CajaService
+  /**
+   *
+   * @param tx
+   * @param ventaId
+   * @param sucursalId
+   * @param usuarioId
+   * @param opts
+   * @returns
+   */
   async attachAndRecordSaleTx(
     tx: Prisma.TransactionClient,
     ventaId: number,
@@ -1557,7 +1565,15 @@ export class CajaService {
       },
     });
   }
-  //servicio utilitario
+
+  /**
+   *
+   * @param tx
+   * @param metodoPago
+   * @param usuarioId
+   * @param sucursalId
+   * @param monto
+   */
   async generateMovimientoFinanciero(
     tx: Prisma.TransactionClient,
     metodoPago: MetodoPago,
