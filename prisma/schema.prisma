@@ -148,6 +148,10 @@ model Sucursal {
   solicitudesCreditoVenta SolicitudCreditoVenta[] @relation("SucursalToSolicitudCreditoVenta")
   abonosCredito           AbonoCredito[]          @relation("Sucursal_AbonosCredito") // <— backref
 
+
+  asientosContables AsientoContable[]
+  kardexValorizado  KardexValorizado[]
+
   prorrateos Prorrateo[] @relation("SucursalToProrrateos")
   centrosCosto  CentroCosto[]
 }
@@ -232,6 +236,10 @@ model Usuario {
   creditosAsignados  VentaCuota[]   @relation("ResponsableCobroCredito") 
   
   movimientosPresupuesto MovimientoPresupuesto[]
+
+  asientosContables AsientoContable[]
+
+
 }
 
 // ============================================================================
@@ -294,6 +302,11 @@ model Producto {
 
   partidaPresupuestalId Int?
   partidaPresupuestal   PartidaPresupuestal? @relation(fields: [partidaPresupuestalId], references: [id], onDelete: SetNull)
+
+  asientosContablesLineas AsientoContableLinea[]
+  kardexValorizado        KardexValorizado[]
+
+
 }
 
 
@@ -357,7 +370,8 @@ model ProductoPresentacion {
   tipoPresentacionId Int?
   tipoPresentacion   TipoPresentacion? @relation(fields: [tipoPresentacionId], references: [id], onDelete: SetNull)
   categorias         Categoria[]       @relation(name: "CategoriaToPresentacion")
-
+  kardexValorizado KardexValorizado[]
+  
   @@unique([productoId, nombre])
   @@index([productoId])
   // @@index([sku])
@@ -633,6 +647,9 @@ model HistorialStock {
   requisicionId Int?
   requisicion   Requisicion? @relation(fields: [requisicionId], references: [id], onDelete: SetNull)
 
+  kardexValorizado KardexValorizado?
+  asientosContablesLineas AsientoContableLinea[]
+
   //rastrear venta
   ventaId                 Int?
   venta                   Venta?                 @relation(fields: [ventaId], references: [id], onDelete: SetNull)
@@ -799,6 +816,8 @@ model Proveedor {
   compras          Compra[]
   movimientosCaja  MovimientoFinanciero[]
   cxpDocumentos    CxPDocumento[]         @relation("ProveedorToCxPDocumentos")
+
+  asientosContablesLineas AsientoContableLinea[]
 }
 
 // ============================================================================
@@ -828,6 +847,9 @@ model Cliente {
   VentaEliminada   VentaEliminada[]
   VentaCuota       VentaCuota[]
   Reparacion       Reparacion[]
+
+  asientosContablesLineas AsientoContableLinea[]
+
   //SOFT DELETE
   eliminado        Boolean          @default(false) // SOFT DELETE FLAG
   fechaEliminacion DateTime? // Opcional: cuándo fue dado de baja
@@ -873,6 +895,12 @@ model Venta {
   motivoAnulacion String?
   anuladaPorId    Int?
   anuladaPor      Usuario?  @relation(name: "AnuladoPor", fields: [anuladaPorId], references: [id], onDelete: SetNull)
+
+  
+  asientoContableId Int? @unique
+  asientoContable   AsientoContable? @relation("VentaAsientoContable", fields: [asientoContableId], references: [id], onDelete: SetNull)
+
+  asientosContablesLineas AsientoContableLinea[]
 
   @@unique([imei, id]) // Permite null en `imei` sin conflicto de unicidad 
 }
@@ -1110,61 +1138,46 @@ model MovimientoFinanciero {
   sucursalId Int
   sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
 
-  // Si impacta efectivo, DEBE pertenecer a un turno ABIERTO
   registroCajaId Int?
   registroCaja   RegistroCaja? @relation(fields: [registroCajaId], references: [id])
 
-  // Clasificación y motivo (vistas Admin)
   clasificacion ClasificacionAdmin
   motivo        MotivoMovimiento
+  metodoPago    MetodoPago?
 
-  // Reporte/conciliación
-  metodoPago MetodoPago?
+  deltaCaja  Decimal @default(0) @db.Decimal(14, 2)
+  deltaBanco Decimal @default(0) @db.Decimal(14, 2)
 
-  // IMPORTANTE: efectos explícitos (positivo o negativo)
-  deltaCaja  Decimal @default(0) @db.Decimal(14, 2) // + entra efectivo; - sale efectivo
-  deltaBanco Decimal @default(0) @db.Decimal(14, 2) // + entra al banco; - sale del banco
-
-  // Opcional si deltaBanco ≠ 0
   cuentaBancariaId Int?
   cuentaBancaria   CuentaBancaria? @relation(fields: [cuentaBancariaId], references: [id])
 
-  // Información de negocio
   descripcion String?
   referencia  String?
-  conFactura  Boolean? // útil para compras/gastos
+  conFactura  Boolean?
 
-  // Específicos de depósitos (evita ambigüedad solicitada por el cliente)
-  esDepositoCierre    Boolean @default(false) // si true => bucket “Depósitos (Cierre)”
-  esDepositoProveedor Boolean @default(false) // si true => bucket “Depósitos a Proveedor”
+  esDepositoCierre    Boolean @default(false)
+  esDepositoProveedor Boolean @default(false)
 
-  // Proveedor y costos
   proveedorId Int?
   proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
 
-  gastoOperativoTipo GastoOperativoTipo? // si motivo = GASTO_OPERATIVO
-  costoVentaTipo     CostoVentaTipo? // si motivo = COMPRA_MERCADERIA o COSTO_ASOCIADO
+  gastoOperativoTipo GastoOperativoTipo?
+  costoVentaTipo     CostoVentaTipo?
+  afectaInventario   Boolean @default(false)
 
-  // Inventario (conectar cuando recibamos compras)
-  afectaInventario Boolean @default(false)
-
-  // Quién registró
   usuarioId Int
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
   creadoEn          DateTime         @default(now())
   actualizadoEn     DateTime         @updatedAt
-  esAsientoVentas   Boolean          @default(false) 
-  //nuevo
+  esAsientoVentas   Boolean          @default(false)
   comprobanteTipo   ComprobanteTipo?
   comprobanteNumero String?          @db.VarChar(64)
   comprobanteFecha  DateTime?
-  comprobanteUrl    String? // foto/pdf del baucher
-  //NUEVO
+  comprobanteUrl    String?
+
   pagoCxP           CxPPago?         @relation("CxPPagoToMovimiento")
 
-  //RELACIONES CON PRORROTEOS
-  // Ámbito para aplicar prorrateo (uno u otro, opcionales)
   compraId Int?
   compra   Compra? @relation("MF_to_Compra", fields: [compraId], references: [id], onDelete: SetNull)
 
@@ -1177,14 +1190,19 @@ model MovimientoFinanciero {
   requisicionRecepcionId Int?
   requisicionRecepcion   RequisicionRecepcion? @relation("MF_to_ReqRecepcion", fields: [requisicionRecepcionId], references: [id], onDelete: SetNull)
 
-  // 1:1 con Prorrateo (idempotencia por movimiento)
   prorrateo Prorrateo? @relation("MFToProrrateo")
   abonoCreditos AbonoCredito[]
 
-  @@unique([registroCajaId, referencia], map: "uq_movfin_turno_referencia") // 👈 idempotencia por turno
-  //CONCILIACION EN REPORTES DE CIERRES CON BOLETAS
+
+  asientoContableId Int? @unique
+  asientoContable   AsientoContable? @relation("MovimientoFinancieroAsientoContable", fields: [asientoContableId], references: [id], onDelete: SetNull)
+
+  asientosContablesLineas AsientoContableLinea[]
+
+
+  @@unique([registroCajaId, referencia], map: "uq_movfin_turno_referencia")
   @@unique([cuentaBancariaId, comprobanteTipo, comprobanteNumero], map: "uq_movfin_comprobante")
-  @@index([registroCajaId, esAsientoVentas]) // 👈 útil para consultas
+  @@index([registroCajaId, esAsientoVentas])
   @@index([sucursalId, fecha])
   @@index([registroCajaId])
   @@index([clasificacion, motivo])
@@ -1217,6 +1235,9 @@ model CuentaBancaria {
   tipo          TipoCuentaBancaria     @default(CORRIENTE)
   creadoEn      DateTime               @default(now())
   actualizadoEn DateTime               @updatedAt
+
+  cuentaContableId Int? @unique
+  cuentaContable   CuentaContable? @relation("CuentaContableToCuentaBancaria", fields: [cuentaContableId], references: [id], onDelete: SetNull)
 
   isDeleted   Boolean   @default(false)
   eliminadoEn DateTime? // soft delete
@@ -1568,6 +1589,12 @@ model Compra {
   centroCosto   CentroCosto? @relation(fields: [centroCostoId], references: [id], onDelete: Restrict)
 
   movimientosPresupuesto MovimientoPresupuesto[]
+
+
+  asientoContableId Int? @unique
+  asientoContable   AsientoContable? @relation("CompraAsientoContable", fields: [asientoContableId], references: [id], onDelete: SetNull)
+
+  asientosContablesLineas AsientoContableLinea[]
 
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
@@ -2049,6 +2076,11 @@ model CxPDocumento {
   // ←→ CxPDocumentoLinea (1:N)
   lineas CxPDocumentoLinea[] @relation("DocumentoToLineas")
 
+
+  asientoContableId Int? @unique
+  asientoContable   AsientoContable? @relation("CxPDocumentoAsientoContable", fields: [asientoContableId], references: [id], onDelete: SetNull)
+  asientosContablesLineas AsientoContableLinea[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2116,6 +2148,12 @@ model CxPPago {
   // Trazabilidad: pago originado al cerrar una recepción (opcional)
   compraRecepcionId Int?
   compraRecepcion   CompraRecepcion? @relation("PagoOrigenRecepcion", fields: [compraRecepcionId], references: [id], onDelete: SetNull)
+
+
+  asientoContableId Int? @unique
+  asientoContable   AsientoContable? @relation("CxPPagoAsientoContable", fields: [asientoContableId], references: [id], onDelete: SetNull)
+
+  asientosContablesLineas AsientoContableLinea[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2428,6 +2466,12 @@ model AbonoCredito {
 
   detalles AbonoCuota[]
 
+
+  asientoContableId Int? @unique
+  asientoContable   AsientoContable? @relation("AbonoCreditoAsientoContable", fields: [asientoContableId], references: [id], onDelete: SetNull)
+
+  asientosContablesLineas AsientoContableLinea[]
+
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
@@ -2523,6 +2567,8 @@ model CentroCosto {
   requisiciones Requisicion[]   // Back-relation
   compras       Compra[]        // Back-relation
 
+  asientosContablesLineas AsientoContableLinea[]
+
   creadoEn      DateTime        @default(now())
   actualizadoEn DateTime        @updatedAt
 
@@ -2541,6 +2587,12 @@ model PartidaPresupuestal {
   // Relaciones a tus catálogos actuales
   categorias    Categoria[]     
   productos     Producto[]      
+
+
+  cuentaContableId Int?
+  cuentaContable   CuentaContable? @relation("CuentaContableToPartidaPresupuestal", fields: [cuentaContableId], references: [id], onDelete: SetNull)
+
+  asientosContablesLineas AsientoContableLinea[]
 
   creadoEn      DateTime        @default(now())
   actualizadoEn DateTime        @updatedAt
@@ -2602,8 +2654,227 @@ model MovimientoPresupuesto {
 
 
 
+// ============================================================================
+//  MODULO DE CONTABILIDAD
+// ============================================================================
+
+enum TipoCuentaContable {
+  ACTIVO
+  PASIVO
+  PATRIMONIO
+  INGRESO
+  COSTO
+  GASTO
+  ORDEN
+}
+
+enum NaturalezaCuentaContable {
+  DEUDORA
+  ACREEDORA
+}
+
+enum EstadoAsientoContable {
+  BORRADOR
+  POSTEADO
+  ANULADO
+}
+
+enum OrigenAsientoContable {
+  VENTA
+  COMPRA
+  MOVIMIENTO_FINANCIERO
+  CXP_DOCUMENTO
+  CXP_PAGO
+  ABONO_CREDITO
+  AJUSTE_STOCK
+  TRANSFERENCIA
+  GARANTIA
+  OTRO
+}
+
+enum MetodoValorizacionInventario {
+  FIFO
+  PROMEDIO
+}
+
+model CuentaContable {
+  id            Int                     @id @default(autoincrement())
+  codigo        String                  @unique
+  nombre        String
+  tipo          TipoCuentaContable
+  naturaleza    NaturalezaCuentaContable
+  nivel         Int                     @default(1)
+  permiteMovimiento Boolean             @default(true)
+  activa        Boolean                 @default(true)
+
+  cuentaPadreId Int?
+  cuentaPadre   CuentaContable?         @relation("CuentaContablePadre", fields: [cuentaPadreId], references: [id], onDelete: SetNull)
+  subcuentas    CuentaContable[]        @relation("CuentaContablePadre")
+
+  cuentasBancarias      CuentaBancaria[]       @relation("CuentaContableToCuentaBancaria")
+  partidasPresupuestales PartidaPresupuestal[]  @relation("CuentaContableToPartidaPresupuestal")
+  reglasComoDebe        ReglaContable[]        @relation("ReglaContableDebe")
+  reglasComoHaber       ReglaContable[]        @relation("ReglaContableHaber")
+  lineas                AsientoContableLinea[]
+
+  creadoEn      DateTime                @default(now())
+  actualizadoEn  DateTime                @updatedAt
+
+  @@index([tipo, activa])
+  @@index([cuentaPadreId])
+}
+
+model ReglaContable {
+  id            Int                 @id @default(autoincrement())
+  codigo        String              @unique
+  nombre        String
+  descripcion   String?
+
+  origen        OrigenAsientoContable
+  clasificacion ClasificacionAdmin?
+  motivo        MotivoMovimiento?
+  metodoPago    MetodoPago?
+
+  cuentaDebeId  Int
+  cuentaDebe    CuentaContable      @relation("ReglaContableDebe", fields: [cuentaDebeId], references: [id], onDelete: Restrict)
+
+  cuentaHaberId Int
+  cuentaHaber   CuentaContable      @relation("ReglaContableHaber", fields: [cuentaHaberId], references: [id], onDelete: Restrict)
+
+  usaCentroCosto        Boolean      @default(false)
+  usaPartidaPresupuestal Boolean      @default(false)
+  activa                Boolean      @default(true)
+  prioridad             Int          @default(1)
+
+  creadoEn      DateTime            @default(now())
+  actualizadoEn  DateTime            @updatedAt
+
+  @@index([origen, clasificacion, motivo, metodoPago])
+}
 
 
+model AsientoContable {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime @default(now())
+  descripcion String
+  referencia  String?
+  origen      OrigenAsientoContable
+  origenId    Int?
+  estado      EstadoAsientoContable @default(BORRADOR)
+
+  sucursalId  Int?
+  sucursal    Sucursal? @relation(fields: [sucursalId], references: [id], onDelete: SetNull)
+
+  usuarioId   Int?
+  usuario     Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  totalDebe   Decimal   @default(0) @db.Decimal(14, 2)
+  totalHaber  Decimal   @default(0) @db.Decimal(14, 2)
+
+  lineas      AsientoContableLinea[]
+
+  venta              Venta?              @relation("VentaAsientoContable")
+  compra             Compra?             @relation("CompraAsientoContable")
+  movimientoFinanciero MovimientoFinanciero? @relation("MovimientoFinancieroAsientoContable")
+  cxpDocumento       CxPDocumento?       @relation("CxPDocumentoAsientoContable")
+  cxpPago            CxPPago?            @relation("CxPPagoAsientoContable")
+  abonoCredito       AbonoCredito?       @relation("AbonoCreditoAsientoContable")
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
+
+model AsientoContableLinea {
+  id               Int            @id @default(autoincrement())
+
+  asientoContableId Int
+  asientoContable   AsientoContable @relation(fields: [asientoContableId], references: [id], onDelete: Cascade)
+
+  cuentaContableId  Int
+  cuentaContable    CuentaContable @relation(fields: [cuentaContableId], references: [id], onDelete: Restrict)
+
+  debe              Decimal        @default(0) @db.Decimal(14, 2)
+  haber             Decimal        @default(0) @db.Decimal(14, 2)
+  descripcion       String?
+
+  centroCostoId     Int?
+  centroCosto       CentroCosto?   @relation(fields: [centroCostoId], references: [id], onDelete: SetNull)
+
+  partidaPresupuestalId Int?
+  partidaPresupuestal   PartidaPresupuestal? @relation(fields: [partidaPresupuestalId], references: [id], onDelete: SetNull)
+
+  proveedorId       Int?
+  proveedor         Proveedor?     @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+
+  clienteId         Int?
+  cliente           Cliente?       @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+
+  productoId        Int?
+  producto          Producto?      @relation(fields: [productoId], references: [id], onDelete: SetNull)
+
+  ventaId           Int?
+  venta             Venta?         @relation(fields: [ventaId], references: [id], onDelete: SetNull)
+
+  compraId          Int?
+  compra            Compra?        @relation(fields: [compraId], references: [id], onDelete: SetNull)
+
+  movimientoFinancieroId Int?
+  movimientoFinanciero   MovimientoFinanciero? @relation(fields: [movimientoFinancieroId], references: [id], onDelete: SetNull)
+
+  cxpDocumentoId    Int?
+  cxpDocumento      CxPDocumento?  @relation(fields: [cxpDocumentoId], references: [id], onDelete: SetNull)
+
+  cxpPagoId         Int?
+  cxpPago           CxPPago?       @relation(fields: [cxpPagoId], references: [id], onDelete: SetNull)
+
+  abonoCreditoId    Int?
+  abonoCredito      AbonoCredito?  @relation(fields: [abonoCreditoId], references: [id], onDelete: SetNull)
+
+  historialStockId  Int?
+  historialStock    HistorialStock? @relation(fields: [historialStockId], references: [id], onDelete: SetNull)
+
+  creadoEn          DateTime       @default(now())
+  actualizadoEn     DateTime       @updatedAt
+}
+
+model KardexValorizado {
+  id               Int                     @id @default(autoincrement())
+
+  historialStockId Int?                    @unique
+  historialStock   HistorialStock?         @relation(fields: [historialStockId], references: [id], onDelete: SetNull)
+
+  productoId       Int
+  producto         Producto                @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  presentacionId   Int?
+  presentacion     ProductoPresentacion?    @relation(fields: [presentacionId], references: [id], onDelete: SetNull)
+
+  sucursalId       Int
+  sucursal         Sucursal                @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+
+  tipoMovimiento   TipoMovimientoStock
+
+  cantidadEntrada  Int                     @default(0)
+  cantidadSalida   Int                     @default(0)
+
+  costoUnitario    Decimal                 @db.Decimal(14, 4)
+  costoTotal       Decimal                 @db.Decimal(14, 2)
+
+  saldoCantidad    Int
+  saldoCosto       Decimal                 @db.Decimal(14, 2)
+
+  metodoValorizacion MetodoValorizacionInventario @default(PROMEDIO)
+  observaciones    String?
+
+  creadoEn        DateTime                 @default(now())
+  actualizadoEn    DateTime                 @updatedAt
+
+  @@index([productoId, sucursalId, creadoEn])
+  @@index([historialStockId])
+}
+
+// ============================================================================
 
 
 
