@@ -112,12 +112,17 @@ export class PrismaReglaContableRepository implements ReglaContableRepository {
 
   //     return records.map(ReglaContableMapper.toDomain);
   //   }
-  async findByContext(params: {
-    origen: OrigenAsientoContable;
-    clasificacion?: ClasificacionAdmin;
-    motivo?: MotivoMovimiento;
-    metodoPago?: MetodoPago;
-  }): Promise<ReglaContable[]> {
+  async findByContext(
+    params: {
+      origen: OrigenAsientoContable;
+      clasificacion?: ClasificacionAdmin;
+      motivo?: MotivoMovimiento;
+      metodoPago?: MetodoPago;
+    },
+    tx?: Prisma.TransactionClient,
+  ): Promise<ReglaContable[]> {
+    const prismaClient = tx ?? this.prisma;
+
     const where: Prisma.ReglaContableWhereInput = {
       origen: params.origen,
       activa: true,
@@ -135,7 +140,7 @@ export class PrismaReglaContableRepository implements ReglaContableRepository {
       where.metodoPago = params.metodoPago;
     }
 
-    const records = await this.prisma.reglaContable.findMany({
+    const records = await prismaClient.reglaContable.findMany({
       where,
       orderBy: { prioridad: 'asc' },
     });

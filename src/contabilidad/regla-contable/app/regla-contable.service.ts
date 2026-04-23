@@ -140,14 +140,17 @@ export class ReglaContableService {
   }
 
   //  MOTOR DE REGLAS
-  async resolverRegla(contexto: {
-    origen: OrigenAsientoContable;
-    clasificacion?: ClasificacionAdmin;
-    motivo?: MotivoMovimiento;
-    metodoPago?: MetodoPago;
-  }): Promise<ReglaContable> {
+  async resolverRegla(
+    contexto: {
+      origen: OrigenAsientoContable;
+      clasificacion?: ClasificacionAdmin;
+      motivo?: MotivoMovimiento;
+      metodoPago?: MetodoPago;
+    },
+    tx?: Prisma.TransactionClient,
+  ): Promise<ReglaContable> {
     try {
-      const candidatas = await this.repo.findByContext(contexto);
+      const candidatas = await this.repo.findByContext(contexto, tx);
 
       if (!candidatas.length) {
         throw new BadRequestException(
@@ -155,17 +158,14 @@ export class ReglaContableService {
         );
       }
 
-      // 🔥 Filtrar con lógica de dominio
       const aplicables = candidatas.filter((r) => r.aplica(contexto));
 
       if (!aplicables.length) {
         throw new BadRequestException('No hay reglas aplicables');
       }
 
-      // 🔥 Ordenar por prioridad
       aplicables.sort((a, b) => b.getPrioridad() - a.getPrioridad());
 
-      // 🔥 detectar ambigüedad
       if (
         aplicables.length > 1 &&
         aplicables[0].getPrioridad() === aplicables[1].getPrioridad()

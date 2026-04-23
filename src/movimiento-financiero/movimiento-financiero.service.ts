@@ -8,264 +8,154 @@ import { CreateMovimientoFinancieroDto } from './dto/create-movimiento-financier
 import { UpdateMovimientoFinancieroDto } from './dto/update-movimiento-financiero.dto';
 import {
   ClasificacionAdmin,
+  CostoVentaTipo,
   EstadoTurnoCaja,
+  GastoOperativoTipo,
   MotivoMovimiento,
+  OrigenAsientoContable,
   Prisma,
 } from '@prisma/client';
 import { CrearMovimientoDto } from './dto/crear-movimiento.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UtilitiesService } from 'src/utilities/utilities.service';
 import { CreateMFUtility } from './utilities/createMFDto';
+import { ReglaContableService } from 'src/contabilidad/regla-contable/app/regla-contable.service';
+import { AsientoContableService } from 'src/contabilidad/asiento-contable/app/asiento-contable.service';
 type Tx = Prisma.TransactionClient;
 @Injectable()
 export class MovimientoFinancieroService {
   private readonly logger = new Logger(MovimientoFinancieroService.name);
   constructor(
     private prisma: PrismaService,
-    private readonly utilities: UtilitiesService,
+    private readonly utilitiesService: UtilitiesService,
+    // private readonly reglaContableService: ReglaContableService,
+    // private readonly asientoContableService: AsientoContableService,
   ) {}
 
   async crearMovimiento(dto: CrearMovimientoDto) {
-    this.logger.debug('DTO crear movimiento:', dto);
+    return this.prisma.$transaction(async (tx) => {
+      // 1) Calcula efectos operativos como ya lo haces
+      const effects = this.mapMotivoToEffects(dto);
+      const afectaInventario = this.afectaInventario(dto.motivo);
 
-    const { sucursalId, usuarioId, motivo, monto } = dto;
-    if (!sucursalId || !usuarioId) {
-      throw new BadRequestException('sucursalId y usuarioId son obligatorios');
-    }
-    if (monto <= 0) throw new BadRequestException('monto inválido');
-
-    // 0) Normalizar método de pago ANTES del mapeo
-    if (!dto.metodoPago) {
-      if (
-        motivo === 'DEPOSITO_CIERRE' ||
-        motivo === 'PAGO_PROVEEDOR_BANCO' ||
-        dto.motivo === 'BANCO_A_CAJA' //nuevo
-      ) {
-        dto.metodoPago = 'TRANSFERENCIA';
-      } else {
-        dto.metodoPago = dto.cuentaBancariaId ? 'TRANSFERENCIA' : 'EFECTIVO';
+      const monto = Number(dto.monto);
+      if (!Number.isFinite(monto) || monto <= 0) {
+        throw new BadRequestException('El monto debe ser mayor a 0');
       }
-    }
 
-    // 1) Derivar clasificación y deltas (no toca DB)
-    const { clasificacion, deltaCaja, deltaBanco } =
-      this.mapMotivoToEffects(dto);
-    const afectaCaja = Number(deltaCaja) !== 0;
-    const afectaBanco = Number(deltaBanco) !== 0;
+      // 2) Validaciones de efectivo/caja dentro de la misma transacción
+      if (dto.registroCajaId && effects.deltaCaja !== 0) {
+        await this.utilitiesService.validarMovimientoEfectivo(
+          tx,
+          dto.registroCajaId,
+          effects.deltaCaja,
+        );
+      }
 
-    if (!afectaCaja && !afectaBanco) {
-      throw new BadRequestException(
-        'El movimiento no afecta ni caja ni banco.',
-      );
-    }
-
-    // 2) Coherencia método de pago ↔ efectos
-    const esDepositoCierre =
-      dto.motivo === 'DEPOSITO_CIERRE' || !!dto.esDepositoCierre;
-    const esBancoACaja = dto.motivo === 'BANCO_A_CAJA';
-
-    if (dto.metodoPago === 'EFECTIVO' && afectaBanco) {
-      throw new BadRequestException('Efectivo no puede afectar banco.');
-    }
-    if (
-      dto.metodoPago !== 'EFECTIVO' &&
-      afectaCaja &&
-      !(esDepositoCierre || esBancoACaja)
-    ) {
-      throw new BadRequestException(
-        'Un movimiento no-efectivo no debe afectar caja (salvo depósito de cierre o banco→caja).',
-      );
-    }
-
-    // 3) Transacción: todo lo que mire/grabe en DB va adentro
-    return this.prisma.$transaction(
-      async (tx: Tx) => {
-        let registroCajaId: number | null = dto.registroCajaId ?? null;
-        const permitirTurnoAjeno = (dto as any).permitirTurnoAjeno === true; // opcional
-
-        if (afectaCaja) {
-          // Siempre ligar a la caja del USUARIO en esa sucursal
-          if (!registroCajaId) {
-            const abierto = await tx.registroCaja.findFirst({
-              where: {
-                sucursalId,
-                usuarioInicioId: usuarioId,
-                estado: EstadoTurnoCaja.ABIERTO,
-                fechaCierre: null,
-              },
-              orderBy: { fechaApertura: 'desc' },
-              select: { id: true },
-            });
-            if (!abierto) {
-              throw new BadRequestException(
-                'No tienes una caja abierta en esta sucursal para movimientos en efectivo.',
-              );
-            }
-            registroCajaId = abierto.id;
-          } else {
-            const turno = await tx.registroCaja.findUnique({
-              where: { id: registroCajaId },
-              select: {
-                id: true,
-                estado: true,
-                sucursalId: true,
-                usuarioInicioId: true,
-              },
-            });
-            if (!turno || turno.estado !== EstadoTurnoCaja.ABIERTO) {
-              throw new BadRequestException(
-                'Turno no encontrado o ya cerrado.',
-              );
-            }
-            if (turno.sucursalId !== sucursalId) {
-              throw new BadRequestException(
-                'El turno pertenece a otra sucursal.',
-              );
-            }
-            if (turno.usuarioInicioId !== usuarioId && !permitirTurnoAjeno) {
-              throw new BadRequestException(
-                'El turno no pertenece a este usuario.',
-              );
-            }
-          }
-
-          // candado para evitar carreras
-          await tx.$executeRaw`SET LOCAL lock_timeout = '3s'`;
-          await tx.$queryRaw`
-                  SELECT id FROM "RegistroCaja"
-                  WHERE id = ${registroCajaId}
-                  FOR UPDATE NOWAIT`;
-        } else {
-          if (registroCajaId) {
-            throw new BadRequestException(
-              'Movimientos solo bancarios no deben adjuntar registroCajaId.',
-            );
-          }
-        }
-
-        // 3.2) Reglas de banco dentro de la transacción
-        if (afectaBanco) {
-          if (!dto.cuentaBancariaId) {
-            throw new BadRequestException(
-              'Cuenta bancaria requerida para movimientos bancarios.',
-            );
-          }
-        } else {
-          if (dto.cuentaBancariaId) {
-            throw new BadRequestException(
-              'No envíes cuenta bancaria si el movimiento no afecta banco.',
-            );
-          }
-        }
-
-        // 3.3) Reglas especiales
-        if (esDepositoCierre) {
-          if (!(deltaCaja < 0 && deltaBanco > 0)) {
-            throw new BadRequestException(
-              'Depósito de cierre debe mover caja(-) y banco(+).',
-            );
-          }
-          if (!registroCajaId) {
-            throw new BadRequestException(
-              'Depósito de cierre requiere turno de caja.',
-            );
-          }
-          if (!dto.cuentaBancariaId) {
-            throw new BadRequestException(
-              'Depósito de cierre requiere cuenta bancaria de destino.',
-            );
-          }
-        }
-
-        if (esBancoACaja) {
-          if (!(deltaCaja > 0 && deltaBanco < 0)) {
-            throw new BadRequestException(
-              'Banco→Caja debe mover caja(+) y banco(-).',
-            );
-          }
-          if (!registroCajaId) {
-            throw new BadRequestException('Banco→Caja requiere turno de caja.');
-          }
-          if (!dto.cuentaBancariaId) {
-            throw new BadRequestException(
-              'Banco→Caja requiere cuenta bancaria de origen.',
-            );
-          }
-        }
-
-        if (dto.esDepositoProveedor) {
-          if (
-            !(
-              afectaCaja &&
-              deltaCaja < 0 &&
-              !afectaBanco &&
-              clasificacion === ClasificacionAdmin.COSTO_VENTA
-            )
-          ) {
-            throw new BadRequestException(
-              'Depósito a proveedor debe ser egreso de caja y costo de venta.',
-            );
-          }
-        }
-
-        // 3.4) PRE-GUARDS de efectivo (anti caja negativa)
-        if (afectaCaja && registroCajaId) {
-          await this.utilities.validarMovimientoEfectivo(
-            tx,
-            registroCajaId,
-            Number(deltaCaja),
+      if (dto.motivo === MotivoMovimiento.DEPOSITO_CIERRE) {
+        if (!dto.registroCajaId) {
+          throw new BadRequestException(
+            'El depósito de cierre requiere un registroCajaId',
           );
-
-          if (esDepositoCierre) {
-            const montoAbs = Math.abs(Number(deltaCaja)); // deltaCaja < 0
-            await this.utilities.validarDepositoCierre(
-              tx,
-              registroCajaId,
-              montoAbs,
-            );
-          }
         }
 
-        // 3.5) Crear movimiento
-        const mov = await tx.movimientoFinanciero.create({
-          data: {
-            sucursalId,
-            registroCajaId,
-            clasificacion,
-            motivo,
-            metodoPago: dto.metodoPago ?? null,
-            deltaCaja,
-            deltaBanco,
-            cuentaBancariaId: dto.cuentaBancariaId ?? null,
-            descripcion: dto.descripcion ?? null,
-            referencia: dto.referencia ?? null,
-            esDepositoCierre: !!dto.esDepositoCierre,
-            esDepositoProveedor: !!dto.esDepositoProveedor,
-            proveedorId: dto.proveedorId ?? null,
-            gastoOperativoTipo: (dto.gastoOperativoTipo as any) ?? null,
-            costoVentaTipo: (dto.costoVentaTipo as any) ?? null,
-            afectaInventario: this.afectaInventario(motivo),
-            usuarioId,
+        await this.utilitiesService.validarDepositoCierre(
+          tx,
+          dto.registroCajaId,
+          monto,
+        );
+      }
+
+      // 3) Guarda el movimiento financiero base
+      const movimiento = await tx.movimientoFinanciero.create({
+        data: {
+          fecha: new Date(),
+          sucursal: {
+            connect: { id: dto.sucursalId },
           },
-        });
+          registroCaja: dto.registroCajaId
+            ? {
+                connect: { id: dto.registroCajaId },
+              }
+            : undefined,
+          clasificacion: effects.clasificacion,
+          motivo: dto.motivo,
+          metodoPago: dto.metodoPago ?? null,
 
-        // 3.6 check: revalidar que la caja no quedó negativa
-        if (afectaCaja && registroCajaId) {
-          const { enCaja } = await this.utilities.getCajaEstado(
-            tx,
-            registroCajaId,
-          );
-          if (enCaja < 0) {
-            throw new Error('Caja negativa tras el movimiento; rollback.');
-          }
-        }
+          deltaCaja: effects.deltaCaja,
+          deltaBanco: effects.deltaBanco,
 
-        return mov;
-      },
-      {
-        isolationLevel: 'Serializable',
-      },
-    );
+          cuentaBancaria: dto.cuentaBancariaId
+            ? {
+                connect: { id: dto.cuentaBancariaId },
+              }
+            : undefined,
+
+          descripcion: dto.descripcion ?? null,
+          referencia: dto.referencia ?? null,
+          conFactura: false,
+
+          esDepositoCierre: dto.motivo === MotivoMovimiento.DEPOSITO_CIERRE,
+          esDepositoProveedor:
+            dto.motivo === MotivoMovimiento.DEPOSITO_PROVEEDOR,
+
+          proveedor: dto.proveedorId
+            ? {
+                connect: { id: dto.proveedorId },
+              }
+            : undefined,
+
+          gastoOperativoTipo: dto.gastoOperativoTipo ?? null,
+          costoVentaTipo: dto.costoVentaTipo ?? null,
+          afectaInventario,
+
+          usuario: {
+            connect: { id: dto.usuarioId },
+          },
+
+          // si tu modelo ya tiene estos campos, déjalos;
+          // si no los tiene, quítalos
+          // asientoContableId: null,
+        },
+      });
+
+      // 4) Resuelve la regla contable
+      // const regla = await this.reglaContableService.resolverRegla(
+      //   {
+      //     origen: OrigenAsientoContable.MOVIMIENTO_FINANCIERO,
+      //     clasificacion: effects.clasificacion,
+      //     motivo: dto.motivo,
+      //     metodoPago: dto.metodoPago,
+      //   },
+      //   tx,
+      // );
+
+      // 5) Crea el asiento contable posteado
+      // const asiento = await this.asientoContableService.crearDesdeRegla(
+      //   {
+      //     descripcion: dto.descripcion
+      //       ? `Movimiento financiero: ${dto.descripcion}`
+      //       : `Movimiento financiero #${movimiento.id}`,
+      //     origen: OrigenAsientoContable.MOVIMIENTO_FINANCIERO,
+      //     origenId: movimiento.id,
+      //     monto,
+      //     cuentaDebeId: regla.getCuentaDebeId(),
+      //     cuentaHaberId: regla.getCuentaHaberId(),
+      //   },
+      //   tx,
+      // );
+
+      // 6) Si tu tabla movimientoFinanciero ya tiene asientoContableId, enlázalo
+      //    Si todavía no lo tiene, puedes omitir esta parte por ahora
+      // await tx.movimientoFinanciero.update({
+      //   where: { id: movimiento.id },
+      //   data: {
+      //     asientoContableId: asiento.getId(),
+      //   },
+      // });
+
+      return movimiento;
+    });
   }
 
   private mapMotivoToEffects(dto: CrearMovimientoDto) {
@@ -588,13 +478,13 @@ export class MovimientoFinancieroService {
 
       // G) Pre-guards efectivo (anti caja negativa + depósito cierre válido)
       if (afectaCaja && registroCajaId) {
-        await this.utilities.validarMovimientoEfectivo(
+        await this.utilitiesService.validarMovimientoEfectivo(
           tx,
           registroCajaId,
           Number(deltaCaja),
         );
         if (esDepositoCierre) {
-          await this.utilities.validarDepositoCierre(
+          await this.utilitiesService.validarDepositoCierre(
             tx,
             registroCajaId,
             Math.abs(Number(deltaCaja)),
@@ -621,14 +511,14 @@ export class MovimientoFinancieroService {
           esDepositoCierre: !!dto.esDepositoCierre,
           esDepositoProveedor: !!dto.esDepositoProveedor,
           gastoOperativoTipo: (dto.gastoOperativoTipo as any) ?? null,
-          costoVentaTipo: (dto.costoVentaTipo as any) ?? null,
+          costoVentaTipo: dto.costoVentaTipo ?? null,
           afectaInventario: this.afectaInventario(dto.motivo),
         },
       });
 
       // I) Re-chequeo caja
       if (afectaCaja && registroCajaId) {
-        const { enCaja } = await this.utilities.getCajaEstado(
+        const { enCaja } = await this.utilitiesService.getCajaEstado(
           tx,
           registroCajaId,
         );

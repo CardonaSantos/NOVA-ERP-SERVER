@@ -3,6 +3,7 @@ import {
   MetodoPago,
   MotivoMovimiento,
   OrigenAsientoContable,
+  Prisma,
 } from '@prisma/client';
 import { ReglaContable } from '../entities/regla-contable.entity';
 
@@ -20,12 +21,15 @@ export interface ReglaContableRepository {
   /**
    * 🔥 CLAVE: traer reglas candidatas (filtrado base en DB)
    */
-  findByContext(params: {
-    origen: OrigenAsientoContable;
-    clasificacion?: ClasificacionAdmin;
-    motivo?: MotivoMovimiento;
-    metodoPago?: MetodoPago;
-  }): Promise<ReglaContable[]>;
+  findByContext(
+    params: {
+      origen: OrigenAsientoContable;
+      clasificacion?: ClasificacionAdmin;
+      motivo?: MotivoMovimiento;
+      metodoPago?: MetodoPago;
+    },
+    tx?: Prisma.TransactionClient,
+  ): Promise<ReglaContable[]>;
 
   delete(id: number, tx?: any): Promise<void>;
 }

@@ -1,4 +1,3 @@
-// dto/crear-movimiento.dto.ts
 import {
   IsInt,
   Min,
@@ -8,7 +7,12 @@ import {
   IsEnum,
   IsBoolean,
 } from 'class-validator';
-import { MetodoPago, MotivoMovimiento } from '@prisma/client';
+import {
+  CostoVentaTipo,
+  GastoOperativoTipo,
+  MetodoPago,
+  MotivoMovimiento,
+} from '@prisma/client';
 
 export class CrearMovimientoDto {
   @IsInt()
@@ -18,7 +22,7 @@ export class CrearMovimientoDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  registroCajaId?: number; // requerido si efectivo
+  registroCajaId?: number;
 
   @IsNumber()
   @Min(0.01)
@@ -27,10 +31,9 @@ export class CrearMovimientoDto {
   @IsEnum(MotivoMovimiento)
   motivo!: MotivoMovimiento;
 
-  // el servicio infiere clasificacion según motivo
   @IsOptional()
   @IsEnum(MetodoPago)
-  metodoPago?: MetodoPago; // p.ej. EFECTIVO, TRANSFERENCIA, DEPOSITO
+  metodoPago?: MetodoPago;
 
   @IsOptional()
   @IsString()
@@ -48,7 +51,6 @@ export class CrearMovimientoDto {
   @IsBoolean()
   esDepositoProveedor?: boolean;
 
-  // relaciones opcionales
   @IsOptional()
   @IsInt()
   proveedorId?: number;
@@ -57,16 +59,14 @@ export class CrearMovimientoDto {
   @IsInt()
   cuentaBancariaId?: number;
 
-  // subtipos
   @IsOptional()
-  @IsString()
-  gastoOperativoTipo?: string;
+  @IsEnum(GastoOperativoTipo)
+  gastoOperativoTipo?: GastoOperativoTipo;
 
   @IsOptional()
-  @IsString()
-  costoVentaTipo?: string;
+  @IsEnum(CostoVentaTipo)
+  costoVentaTipo?: CostoVentaTipo;
 
-  // quien registra
   @IsInt()
   @Min(1)
   usuarioId!: number;

@@ -10,6 +10,8 @@ import {
 } from 'class-validator';
 import {
   ClasificacionAdmin,
+  CostoVentaTipo,
+  GastoOperativoTipo,
   MetodoPago,
   MotivoMovimiento,
 } from '@prisma/client';
@@ -23,6 +25,10 @@ export class CreateMFUtility {
   @IsInt()
   @Min(1)
   registroCajaId?: number;
+
+  @IsOptional()
+  @IsEnum(GastoOperativoTipo)
+  gastoOperativoTipo?: GastoOperativoTipo;
 
   @IsNumber()
   @Min(0.01)
@@ -64,14 +70,9 @@ export class CreateMFUtility {
   @IsInt()
   cuentaBancariaId?: number;
 
-  // subtipos
   @IsOptional()
   @IsString()
-  gastoOperativoTipo?: string;
-
-  @IsOptional()
-  @IsString()
-  costoVentaTipo?: string;
+  costoVentaTipo?: CostoVentaTipo;
 
   // quien registra
   @IsInt()
