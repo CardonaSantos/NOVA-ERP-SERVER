@@ -15,5 +15,6 @@ import { PrismaCuentaContableRepository } from './infraestructure/prisma-cuenta-
       useClass: PrismaCuentaContableRepository,
     },
   ],
+  exports: [CuentaContableService],
 })
 export class CuentaContableModule {}

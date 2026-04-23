@@ -15,5 +15,6 @@ import { PrismaAsientoContableRepository } from './infraestructure/asiento-conta
       useClass: PrismaAsientoContableRepository,
     },
   ],
+  exports: [AsientoContableService],
 })
 export class AsientoContableModule {}

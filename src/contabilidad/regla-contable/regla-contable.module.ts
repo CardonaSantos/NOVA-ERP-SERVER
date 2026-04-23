@@ -4,7 +4,7 @@ import { ReglaContableController } from './presentation/regla-contable.controlle
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { REGLA_CONTABLE_REPOSITORY } from './domain/regla-contable.repository';
 import { PrismaReglaContableRepository } from './infraestructure/prisma-regla-contable.repository';
-
+// lknlkn
 @Module({
   imports: [PrismaModule],
   controllers: [ReglaContableController],
@@ -15,5 +15,6 @@ import { PrismaReglaContableRepository } from './infraestructure/prisma-regla-co
       useClass: PrismaReglaContableRepository,
     },
   ],
+  exports: [ReglaContableService],
 })
 export class ReglaContableModule {}

@@ -28,8 +28,8 @@ export class MovimientoFinancieroService {
   constructor(
     private prisma: PrismaService,
     private readonly utilitiesService: UtilitiesService,
-    // private readonly reglaContableService: ReglaContableService,
-    // private readonly asientoContableService: AsientoContableService,
+    private readonly reglaContableService: ReglaContableService,
+    private readonly asientoContableService: AsientoContableService,
   ) {}
 
   async crearMovimiento(dto: CrearMovimientoDto) {
@@ -120,39 +120,39 @@ export class MovimientoFinancieroService {
       });
 
       // 4) Resuelve la regla contable
-      // const regla = await this.reglaContableService.resolverRegla(
-      //   {
-      //     origen: OrigenAsientoContable.MOVIMIENTO_FINANCIERO,
-      //     clasificacion: effects.clasificacion,
-      //     motivo: dto.motivo,
-      //     metodoPago: dto.metodoPago,
-      //   },
-      //   tx,
-      // );
+      const regla = await this.reglaContableService.resolverRegla(
+        {
+          origen: OrigenAsientoContable.MOVIMIENTO_FINANCIERO,
+          clasificacion: effects.clasificacion,
+          motivo: dto.motivo,
+          metodoPago: dto.metodoPago,
+        },
+        tx,
+      );
 
       // 5) Crea el asiento contable posteado
-      // const asiento = await this.asientoContableService.crearDesdeRegla(
-      //   {
-      //     descripcion: dto.descripcion
-      //       ? `Movimiento financiero: ${dto.descripcion}`
-      //       : `Movimiento financiero #${movimiento.id}`,
-      //     origen: OrigenAsientoContable.MOVIMIENTO_FINANCIERO,
-      //     origenId: movimiento.id,
-      //     monto,
-      //     cuentaDebeId: regla.getCuentaDebeId(),
-      //     cuentaHaberId: regla.getCuentaHaberId(),
-      //   },
-      //   tx,
-      // );
+      const asiento = await this.asientoContableService.crearDesdeRegla(
+        {
+          descripcion: dto.descripcion
+            ? `Movimiento financiero: ${dto.descripcion}`
+            : `Movimiento financiero #${movimiento.id}`,
+          origen: OrigenAsientoContable.MOVIMIENTO_FINANCIERO,
+          origenId: movimiento.id,
+          monto,
+          cuentaDebeId: regla.getCuentaDebeId(),
+          cuentaHaberId: regla.getCuentaHaberId(),
+        },
+        tx,
+      );
 
       // 6) Si tu tabla movimientoFinanciero ya tiene asientoContableId, enlázalo
       //    Si todavía no lo tiene, puedes omitir esta parte por ahora
-      // await tx.movimientoFinanciero.update({
-      //   where: { id: movimiento.id },
-      //   data: {
-      //     asientoContableId: asiento.getId(),
-      //   },
-      // });
+      await tx.movimientoFinanciero.update({
+        where: { id: movimiento.id },
+        data: {
+          asientoContableId: asiento.getId(),
+        },
+      });
 
       return movimiento;
     });
