@@ -37,7 +37,7 @@ export class AsientoContableMapper {
       fecha: entity.getFecha(),
       descripcion: entity.getDescripcion(),
 
-      origen: mapOrigenToPrisma(entity.getOrigen()), // 👈 AQUÍ
+      origen: mapOrigenToPrisma(entity.getOrigen()),
 
       origenId: entity.getOrigenId() ?? null,
 

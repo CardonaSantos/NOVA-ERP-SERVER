@@ -39,6 +39,7 @@ const mapMetodoPagoToCanal = (metodo?: MetodoPago): CanalMovimiento => {
       return CanalMovimiento.BANCO;
 
     case MetodoPago.CREDITO:
+      throw new BadRequestException('CREDITO no soportado aún');
     case MetodoPago.OTRO:
     default:
       return CanalMovimiento.NINGUNO;
@@ -180,7 +181,8 @@ const MOTIVO_EFFECTS: Record<
   }),
 
   DEPOSITO_PROVEEDOR: ({ monto }) => ({
-    clasificacion: ClasificacionAdmin.COSTO_VENTA,
+    // clasificacion: ClasificacionAdmin.COSTO_VENTA,
+    clasificacion: ClasificacionAdmin.COSTO_VENTA, // OK si así lo decidiste
     deltaCaja: -monto,
     deltaBanco: 0,
     necesitaTurno: true,
@@ -214,7 +216,8 @@ const MOTIVO_EFFECTS: Record<
     const mov = egreso(monto, canal);
 
     return {
-      clasificacion: ClasificacionAdmin.COSTO_VENTA,
+      // clasificacion: ClasificacionAdmin.COSTO_VENTA,
+      clasificacion: ClasificacionAdmin.GASTO_OPERATIVO,
       deltaCaja: mov.deltaCaja,
       deltaBanco: mov.deltaBanco,
       necesitaTurno: mov.deltaCaja < 0,

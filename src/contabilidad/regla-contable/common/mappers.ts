@@ -27,9 +27,48 @@ export class ReglaContableMapper {
 
   static toPersistence(
     entity: ReglaContable,
+  ): Prisma.ReglaContableUncheckedUpdateInput {
+    return {
+      codigo: entity.getCodigo(),
+      nombre: entity.getNombre(),
+      descripcion: entity.getDescripcion() ?? null,
+      origen: entity.getOrigen(),
+      clasificacion: entity.getClasificacion() ?? null,
+      motivo: entity.getMotivo() ?? null,
+      metodoPago: entity.getMetodoPago() ?? null,
+      cuentaDebeId: entity.getCuentaDebeId(),
+      cuentaHaberId: entity.getCuentaHaberId(),
+      usaCentroCosto: entity.usaCentroCostos(),
+      usaPartidaPresupuestal: entity.usaPartidaPresupuesto(),
+      activa: entity.estaActiva(),
+      prioridad: entity.getPrioridad(),
+    };
+  }
+
+  static toCreate(
+    entity: ReglaContable,
   ): Prisma.ReglaContableUncheckedCreateInput {
     return {
-      id: entity.getId() || undefined,
+      codigo: entity.getCodigo(),
+      nombre: entity.getNombre(),
+      descripcion: entity.getDescripcion() ?? null,
+      origen: entity.getOrigen(),
+      clasificacion: entity.getClasificacion() ?? null,
+      motivo: entity.getMotivo() ?? null,
+      metodoPago: entity.getMetodoPago() ?? null,
+      cuentaDebeId: entity.getCuentaDebeId(),
+      cuentaHaberId: entity.getCuentaHaberId(),
+      usaCentroCosto: entity.usaCentroCostos(),
+      usaPartidaPresupuestal: entity.usaPartidaPresupuesto(),
+      activa: entity.estaActiva(),
+      prioridad: entity.getPrioridad(),
+    };
+  }
+
+  static toUpdate(
+    entity: ReglaContable,
+  ): Prisma.ReglaContableUncheckedUpdateInput {
+    return {
       codigo: entity.getCodigo(),
       nombre: entity.getNombre(),
       descripcion: entity.getDescripcion() ?? null,

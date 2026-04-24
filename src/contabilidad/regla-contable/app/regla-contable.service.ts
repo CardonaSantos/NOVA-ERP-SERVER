@@ -27,6 +27,7 @@ import {
 } from 'src/contabilidad/asiento-contable/domain/domain.repository';
 import { AsientoContableLinea } from 'src/contabilidad/asiento-contable/entities/asiento-contable-linea.entity';
 import { AsientoContable } from 'src/contabilidad/asiento-contable/entities/asiento-contable.entity';
+import { ReglaContableMapper } from '../common/mappers';
 
 @Injectable()
 export class ReglaContableService {
@@ -77,6 +78,7 @@ export class ReglaContableService {
   async actualizar(
     id: number,
     data: Partial<{
+      codigo: string;
       nombre: string;
       descripcion: string;
       cuentaDebeId: number;
@@ -89,14 +91,35 @@ export class ReglaContableService {
     }>,
     tx?: Prisma.TransactionClient,
   ): Promise<ReglaContable> {
+    this.logger.log(`actualizar() iniciado id=${id}`);
+    this.logger.debug(`payload recibido=${JSON.stringify(data, null, 2)}`);
+
     const entity = await this.obtenerPorId(id);
 
-    try {
-      if (data.nombre) entity.cambiarNombre(data.nombre);
-      if (data.descripcion !== undefined)
-        entity.cambiarDescripcion(data.descripcion);
+    this.logger.debug(
+      `antes de mutar=${JSON.stringify(ReglaContableMapper.toPersistence(entity), null, 2)}`,
+    );
 
-      if (data.cuentaDebeId && data.cuentaHaberId) {
+    try {
+      if (data.codigo !== undefined) {
+        this.logger.debug(`cambiando codigo: ${data.codigo}`);
+        entity.cambiarCodigo(data.codigo);
+      }
+
+      if (data.nombre !== undefined) {
+        this.logger.debug(`cambiando nombre: ${data.nombre}`);
+        entity.cambiarNombre(data.nombre);
+      }
+
+      if (data.descripcion !== undefined) {
+        this.logger.debug(`cambiando descripcion: ${data.descripcion}`);
+        entity.cambiarDescripcion(data.descripcion);
+      }
+
+      if (data.cuentaDebeId !== undefined && data.cuentaHaberId !== undefined) {
+        this.logger.debug(
+          `cambiando cuentas debe/haber: ${data.cuentaDebeId}/${data.cuentaHaberId}`,
+        );
         entity.cambiarCuentas(data.cuentaDebeId, data.cuentaHaberId);
       }
 
@@ -105,6 +128,18 @@ export class ReglaContableService {
         data.motivo !== undefined ||
         data.metodoPago !== undefined
       ) {
+        this.logger.debug(
+          `cambiando contexto: ${JSON.stringify(
+            {
+              clasificacion: data.clasificacion,
+              motivo: data.motivo,
+              metodoPago: data.metodoPago,
+            },
+            null,
+            2,
+          )}`,
+        );
+
         entity.cambiarContexto({
           clasificacion: data.clasificacion,
           motivo: data.motivo,
@@ -112,15 +147,28 @@ export class ReglaContableService {
         });
       }
 
-      if (data.prioridad) {
+      if (data.prioridad !== undefined) {
+        this.logger.debug(`cambiando prioridad: ${data.prioridad}`);
         entity.cambiarPrioridad(data.prioridad);
       }
 
       if (data.activa === true) entity.activar();
       if (data.activa === false) entity.desactivar();
 
-      return await this.repo.update(entity, tx);
+      this.logger.debug(
+        `despues de mutar=${JSON.stringify(ReglaContableMapper.toPersistence(entity), null, 2)}`,
+      );
+
+      const result = await this.repo.update(entity, tx);
+
+      this.logger.log(`actualizar() OK id=${id}`);
+      this.logger.debug(
+        `retorno repo=${JSON.stringify(ReglaContableMapper.toPersistence(result), null, 2)}`,
+      );
+
+      return result;
     } catch (error) {
+      this.logger.error(`actualizar() falló id=${id}`, error);
       ErrorHandler.handle(error, {
         operacion: 'actualizar regla contable',
         id,

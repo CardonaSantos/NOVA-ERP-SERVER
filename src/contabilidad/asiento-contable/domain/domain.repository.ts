@@ -1,3 +1,4 @@
+import { AsientoContableResponse } from '../common/types-maps';
 import { AsientoContable } from '../entities/asiento-contable.entity';
 
 export const ASIENTO_CONTABLE_REPOSITORY = Symbol(
@@ -10,7 +11,7 @@ export interface AsientoContableRepository {
   update(entity: AsientoContable, tx?: any): Promise<AsientoContable>;
 
   findById(id: number): Promise<AsientoContable | null>;
-  findAll(): Promise<Array<AsientoContable>>;
+  findAll(): Promise<Array<AsientoContableResponse>>;
 
   delete(id: number, tx?: any): Promise<void>;
 }

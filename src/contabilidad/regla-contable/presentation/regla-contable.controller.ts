@@ -11,6 +11,7 @@ import {
   HttpStatus,
   UsePipes,
   ValidationPipe,
+  Logger,
 } from '@nestjs/common';
 import { ReglaContableService } from '../app/regla-contable.service';
 import { CreateReglaContableDto } from '../dto/create-regla-contable.dto';
@@ -18,14 +19,15 @@ import { UpdateReglaContableDto } from '../dto/update-regla-contable.dto';
 import { ResolverReglaContableDto } from '../dto/resolve-dto';
 
 @Controller('reglas-contables')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }),
-)
+// @UsePipes(
+//   new ValidationPipe({
+//     whitelist: true,
+//     forbidNonWhitelisted: true,
+//     transform: true,
+//   }),
+// )
 export class ReglaContableController {
+  private readonly logger = new Logger(ReglaContableController.name);
   constructor(private readonly service: ReglaContableService) {}
 
   // =========================
@@ -61,6 +63,7 @@ export class ReglaContableController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateReglaContableDto,
   ) {
+    this.logger.log(`DTO recibido:\n${JSON.stringify(dto, null, 2)}`);
     return this.service.actualizar(id, dto);
   }
 

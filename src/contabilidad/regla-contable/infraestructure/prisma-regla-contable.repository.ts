@@ -23,15 +23,22 @@ export class PrismaReglaContableRepository implements ReglaContableRepository {
   ): Promise<ReglaContable> {
     const prismaClient = tx ?? this.prisma;
 
-    const data = ReglaContableMapper.toPersistence(entity);
+    // CREATE
+    if (!entity.getId()) {
+      const created = await prismaClient.reglaContable.create({
+        data: ReglaContableMapper.toCreate(entity),
+      });
 
-    const record = await prismaClient.reglaContable.upsert({
-      where: { id: entity.getId() || 0 },
-      create: data,
-      update: { ...data, id: undefined },
+      return ReglaContableMapper.toDomain(created);
+    }
+
+    // UPDATE
+    const updated = await prismaClient.reglaContable.update({
+      where: { id: entity.getId() },
+      data: ReglaContableMapper.toUpdate(entity),
     });
 
-    return ReglaContableMapper.toDomain(record);
+    return ReglaContableMapper.toDomain(updated);
   }
 
   async findById(id: number): Promise<ReglaContable | null> {
@@ -59,10 +66,23 @@ export class PrismaReglaContableRepository implements ReglaContableRepository {
   ): Promise<ReglaContable> {
     const prismaClient = tx ?? this.prisma;
 
+    const payload = ReglaContableMapper.toUpdate(entity);
+
+    console.log('[ReglaContableRepository.update] id=', entity.getId());
+    console.log(
+      '[ReglaContableRepository.update] payload=',
+      JSON.stringify(payload, null, 2),
+    );
+
     const record = await prismaClient.reglaContable.update({
       where: { id: entity.getId() },
-      data: ReglaContableMapper.toPersistence(entity),
+      data: payload,
     });
+
+    console.log(
+      '[ReglaContableRepository.update] record=',
+      JSON.stringify(record, null, 2),
+    );
 
     return ReglaContableMapper.toDomain(record);
   }

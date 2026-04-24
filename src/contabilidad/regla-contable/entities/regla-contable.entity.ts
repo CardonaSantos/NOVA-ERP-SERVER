@@ -7,7 +7,7 @@ import {
 
 export class ReglaContable {
   private readonly id: number;
-  private readonly codigo: string;
+  private codigo: string;
 
   private nombre: string;
   private descripcion?: string;
@@ -135,6 +135,14 @@ export class ReglaContable {
     this.descripcion = desc;
   }
 
+  cambiarCodigo(codigo: string) {
+    if (!codigo || codigo.trim().length < 3) {
+      throw new Error('Código inválido');
+    }
+
+    this.codigo = codigo.trim(); // ✅ aquí está el cambio real
+  }
+
   cambiarCuentas(debeId: number, haberId: number) {
     this.validateCuentas(debeId, haberId);
     this.cuentaDebeId = debeId;
@@ -157,12 +165,12 @@ export class ReglaContable {
   }
 
   activar() {
-    if (this.activa) throw new Error('Ya activa');
+    // if (this.activa) throw new Error('Ya activa');
     this.activa = true;
   }
 
   desactivar() {
-    if (!this.activa) throw new Error('Ya inactiva');
+    // if (!this.activa) throw new Error('Ya inactiva');
     this.activa = false;
   }
 
