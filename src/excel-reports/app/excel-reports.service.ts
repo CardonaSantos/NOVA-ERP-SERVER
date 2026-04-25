@@ -1,5 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  QueryBalanceComprobacion,
+  QueryEstadoBancario,
+  QueryEstadoCajaTurno,
+  QueryEstadoCuentaCliente,
+  QueryEstadoCuentaContable,
+  QueryEstadoCuentaProveedor,
+  QueryEstadoResultados,
+  QueryFlujoCaja,
+  QueryLibroDiario,
+  QueryLibroMayor,
+  QueryMovimientosSinAsiento,
+  QueryReporteGastos,
+  QueryReporteReglasContables,
+  QueryReporteVentas,
   REPORT_REPOSITORY,
   ReportRepository,
 } from '../domain/reports.repository';
@@ -26,19 +40,59 @@ export class ExcelReportsService {
   }
 
   // CONTABILIDAD
-  async libroDiario(query: QueryReport) {
-    return this.reportRepo.libroDiario(query);
+  reportLibroDiario(query: QueryLibroDiario) {
+    return this.reportRepo.reporteLibroDiario(query);
   }
 
-  async libroMayor(query: QueryReport) {
-    return this.reportRepo.libroMayor(query);
+  reportLibroMayorPorCuenta(query: QueryLibroMayor) {
+    return this.reportRepo.reporteLibroMayorPorCuenta(query);
   }
 
-  async balanceComprobacion(query: QueryReport) {
-    return this.reportRepo.balanceComprobacion(query);
+  reportBalanceComprobacion(query: QueryBalanceComprobacion) {
+    return this.reportRepo.reporteBalanceComprobacion(query);
   }
 
-  async estadoResultados(query: QueryReport) {
-    return this.reportRepo.estadoResultados(query);
+  reportEstadoResultados(query: QueryEstadoResultados) {
+    return this.reportRepo.reporteEstadoResultados(query);
+  }
+
+  reportFlujoCaja(query: QueryFlujoCaja) {
+    return this.reportRepo.reporteFlujoCaja(query);
+  }
+
+  reportEstadoCajaTurno(query: QueryEstadoCajaTurno) {
+    return this.reportRepo.reporteEstadoCajaTurno(query);
+  }
+
+  reportEstadoCuentaContable(query: QueryEstadoCuentaContable) {
+    return this.reportRepo.reporteEstadoCuentaContable(query);
+  }
+
+  reportEstadoCuentaCliente(query: QueryEstadoCuentaCliente) {
+    return this.reportRepo.reporteEstadoCuentaCliente(query);
+  }
+
+  reportEstadoCuentaProveedor(query: QueryEstadoCuentaProveedor) {
+    return this.reportRepo.reporteEstadoCuentaProveedor(query);
+  }
+
+  reportVentas2(query: QueryReporteVentas) {
+    return this.reportRepo.reporteVentas(query);
+  }
+
+  reportGastos(query: QueryReporteGastos) {
+    return this.reportRepo.reporteGastos(query);
+  }
+
+  reportReglasContables(query: QueryReporteReglasContables) {
+    return this.reportRepo.reporteReglasContables(query);
+  }
+
+  reportMovimientosSinAsiento(query: QueryMovimientosSinAsiento) {
+    return this.reportRepo.reporteMovimientosSinAsiento(query);
+  }
+
+  reportEstadoBancario(query: QueryEstadoBancario) {
+    return this.reportRepo.reporteEstadoBancario(query);
   }
 }
