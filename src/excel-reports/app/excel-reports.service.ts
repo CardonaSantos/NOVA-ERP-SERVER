@@ -24,4 +24,21 @@ export class ExcelReportsService {
   async reportCajas(query: QueryReportCajas) {
     return await this.reportRepo.reporteCajas(query);
   }
+
+  // CONTABILIDAD
+  async libroDiario(query: QueryReport) {
+    return this.reportRepo.libroDiario(query);
+  }
+
+  async libroMayor(query: QueryReport) {
+    return this.reportRepo.libroMayor(query);
+  }
+
+  async balanceComprobacion(query: QueryReport) {
+    return this.reportRepo.balanceComprobacion(query);
+  }
+
+  async estadoResultados(query: QueryReport) {
+    return this.reportRepo.estadoResultados(query);
+  }
 }

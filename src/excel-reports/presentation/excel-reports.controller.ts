@@ -72,4 +72,58 @@ export class ExcelReportsController {
 
     res.end(buffer);
   }
+
+  // CONTABILIDAD MODULO
+
+  @Post('libro-diario')
+  async libroDiario(@Body() dto: QueryReport, @Res() res: Response) {
+    const buffer = await this.excelReportsService.libroDiario(dto);
+
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="libro_diario_${Date.now()}.xlsx`,
+    });
+
+    res.end(buffer);
+  }
+
+  @Post('mayor')
+  async mayor(@Body() dto: QueryReport, @Res() res: Response) {
+    const buffer = await this.excelReportsService.libroMayor(dto);
+
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="libro_mayor_${Date.now()}.xlsx`,
+    });
+
+    res.end(buffer);
+  }
+
+  @Post('balance-comprobacion')
+  async balance(@Body() dto: QueryReport, @Res() res: Response) {
+    const buffer = await this.excelReportsService.balanceComprobacion(dto);
+
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="balance_${Date.now()}.xlsx`,
+    });
+
+    res.end(buffer);
+  }
+
+  @Post('estado-resultados')
+  async estadoResultados(@Body() dto: QueryReport, @Res() res: Response) {
+    const buffer = await this.excelReportsService.estadoResultados(dto);
+
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="estado_resultados_${Date.now()}.xlsx`,
+    });
+
+    res.end(buffer);
+  }
 }

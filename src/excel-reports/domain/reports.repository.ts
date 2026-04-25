@@ -9,4 +9,10 @@ export interface ReportRepository {
   ventasHistorial(query: QueryReport): Promise<Buffer>;
 
   reporteCajas(query: QueryReportCajas): Promise<Buffer>;
+
+  // CONTABILIDAD
+  libroDiario(query: QueryReport): Promise<Buffer>;
+  libroMayor(query: QueryReport): Promise<Buffer>;
+  balanceComprobacion(query: QueryReport): Promise<Buffer>;
+  estadoResultados(query: QueryReport): Promise<Buffer>;
 }

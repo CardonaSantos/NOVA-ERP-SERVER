@@ -577,4 +577,147 @@ export class PrismaReportsRepository implements ReportRepository {
     const buff = await workbook.xlsx.writeBuffer();
     return Buffer.from(buff);
   }
+
+  // CONTABILIDAD
+
+  private createWorkbook(name: string) {
+    const wb = new Exeljs.Workbook();
+    const ws = wb.addWorksheet(name);
+
+    ws.getRow(1).font = { bold: true };
+
+    return { wb, ws };
+  }
+
+  private async toBuffer(wb: Exeljs.Workbook): Promise<Buffer> {
+    const buffer = await wb.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  async libroDiario(query: QueryReport): Promise<Buffer> {
+    const records = await this.prisma.asientoContable.findMany({
+      include: { lineas: { include: { cuentaContable: true } } },
+      orderBy: { fecha: 'asc' },
+    });
+
+    const wb = new Exeljs.Workbook();
+    const ws = wb.addWorksheet('Libro Diario');
+
+    ws.columns = [
+      { header: 'Fecha', key: 'fecha', width: 15 },
+      { header: 'Descripción', key: 'descripcion', width: 30 },
+      { header: 'Cuenta', key: 'cuenta', width: 30 },
+      { header: 'Debe', key: 'debe', width: 15 },
+      { header: 'Haber', key: 'haber', width: 15 },
+    ];
+
+    records.forEach((asiento) => {
+      asiento.lineas.forEach((l) => {
+        ws.addRow({
+          fecha: asiento.fecha.toISOString().split('T')[0],
+          descripcion: asiento.descripcion,
+          cuenta: `${l.cuentaContable.codigo} ${l.cuentaContable.nombre}`,
+          debe: Number(l.debe),
+          haber: Number(l.haber),
+        });
+      });
+    });
+
+    // return wb.xlsx.writeBuffer();
+    return this.toBuffer(wb);
+  }
+
+  async libroMayor(query: QueryReport): Promise<Buffer> {
+    const lineas = await this.prisma.asientoContableLinea.findMany({
+      include: {
+        cuentaContable: true,
+        asientoContable: true,
+      },
+    });
+
+    const wb = new Exeljs.Workbook();
+    const ws = wb.addWorksheet('Mayor');
+
+    ws.columns = [
+      { header: 'Cuenta', key: 'cuenta', width: 30 },
+      { header: 'Fecha', key: 'fecha', width: 15 },
+      { header: 'Debe', key: 'debe', width: 15 },
+      { header: 'Haber', key: 'haber', width: 15 },
+    ];
+
+    lineas.forEach((l) => {
+      ws.addRow({
+        cuenta: l.cuentaContable.nombre,
+        fecha: l.asientoContable.fecha.toISOString().split('T')[0],
+        debe: Number(l.debe),
+        haber: Number(l.haber),
+      });
+    });
+
+    // return wb.xlsx.writeBuffer();
+    return this.toBuffer(wb);
+  }
+
+  async balanceComprobacion(query: QueryReport): Promise<Buffer> {
+    const cuentas = await this.prisma.cuentaContable.findMany({
+      include: { lineas: true },
+    });
+
+    const wb = new Exeljs.Workbook();
+    const ws = wb.addWorksheet('Balance');
+
+    ws.columns = [
+      { header: 'Cuenta', key: 'cuenta', width: 30 },
+      { header: 'Debe', key: 'debe', width: 15 },
+      { header: 'Haber', key: 'haber', width: 15 },
+    ];
+
+    cuentas.forEach((c) => {
+      const debe = c.lineas.reduce((a, b) => a + Number(b.debe), 0);
+      const haber = c.lineas.reduce((a, b) => a + Number(b.haber), 0);
+
+      ws.addRow({
+        cuenta: c.nombre,
+        debe,
+        haber,
+      });
+    });
+
+    // return wb.xlsx.writeBuffer();
+
+    return this.toBuffer(wb);
+  }
+
+  async estadoResultados(query: QueryReport): Promise<Buffer> {
+    const cuentas = await this.prisma.cuentaContable.findMany({
+      include: { lineas: true },
+    });
+
+    let ingresos = 0;
+    let costos = 0;
+    let gastos = 0;
+
+    cuentas.forEach((c) => {
+      const total = c.lineas.reduce(
+        (a, b) => a + Number(b.haber) - Number(b.debe),
+        0,
+      );
+
+      if (c.tipo === 'INGRESO') ingresos += total;
+      if (c.tipo === 'COSTO') costos += total;
+      if (c.tipo === 'GASTO') gastos += total;
+    });
+
+    const wb = new Exeljs.Workbook();
+    const ws = wb.addWorksheet('Resultados');
+
+    ws.addRow(['Ingresos', ingresos]);
+    ws.addRow(['Costos', costos]);
+    ws.addRow(['Gastos', gastos]);
+    ws.addRow([]);
+    ws.addRow(['Utilidad', ingresos - costos - gastos]);
+
+    // return await wb.xlsx.writeBuffer();
+    return this.toBuffer(wb);
+  }
 }
