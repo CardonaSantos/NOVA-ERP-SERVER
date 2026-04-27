@@ -38,9 +38,16 @@ import { ExcelReportFactory } from '../excel-report-factory';
 import { toNumber } from '../utils';
 
 function baseWhereDate(fechaInicio?: Date, fechaFin?: Date) {
-  const where: { gte?: Date; lte?: Date } = {};
-  if (fechaInicio) where.gte = fechaInicio;
-  if (fechaFin) where.lte = fechaFin;
+  const where: { gte?: Date; lt?: Date } = {};
+
+  if (fechaInicio) {
+    where.gte = dayjs(fechaInicio).startOf('day').toDate();
+  }
+
+  if (fechaFin) {
+    where.lt = dayjs(fechaFin).add(1, 'day').startOf('day').toDate();
+  }
+
   return Object.keys(where).length ? where : undefined;
 }
 
@@ -622,20 +629,10 @@ export class PrismaReportsRepository implements ReportRepository {
   // CONTABILIDAD
 
   private async fetchAllForLibro(query: QueryLibroDiario) {
-    const fechaInicio = query.fechaInicio
-      ? new Date(query.fechaInicio)
-      : undefined;
-    const fechaFin = query.fechaFin ? new Date(query.fechaFin) : undefined;
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
 
     const where: Prisma.AsientoContableWhereInput = {
-      ...(fechaInicio || fechaFin
-        ? {
-            fecha: {
-              ...(fechaInicio ? { gte: fechaInicio } : {}),
-              ...(fechaFin ? { lte: fechaFin } : {}),
-            },
-          }
-        : {}),
+      ...(fechaWhere ? { fecha: fechaWhere } : {}),
 
       ...(query.sucursalId ? { sucursalId: query.sucursalId } : {}),
       ...(query.usuarioId ? { usuarioId: query.usuarioId } : {}),
@@ -787,10 +784,22 @@ export class PrismaReportsRepository implements ReportRepository {
 
   async reporteLibroMayorPorCuenta(query: QueryLibroMayor): Promise<Buffer> {
     const { wb } = this.baseWorkbook('Libro Mayor por Cuenta');
+
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
+
     const cuentas = await this.prisma.cuentaContable.findMany({
       where: { id: query.cuentaContableId, activa: true },
       include: {
         lineas: {
+          where: {
+            ...(fechaWhere
+              ? {
+                  asientoContable: {
+                    fecha: fechaWhere,
+                  },
+                }
+              : {}),
+          },
           include: {
             asientoContable: { include: { sucursal: true } },
             cuentaContable: true,
@@ -802,6 +811,7 @@ export class PrismaReportsRepository implements ReportRepository {
 
     for (const cuenta of cuentas) {
       const sheet = wb.addWorksheet(cuenta.codigo.slice(0, 31));
+
       this.excel.setColumns(sheet, [
         { header: 'Cuenta', key: 'cuenta', width: 28 },
         { header: 'Fecha', key: 'fecha', width: 18 },
@@ -814,10 +824,12 @@ export class PrismaReportsRepository implements ReportRepository {
       ]);
 
       let saldo = 0;
+
       for (const linea of cuenta.lineas) {
         const debe = toNumber(linea.debe);
         const haber = toNumber(linea.haber);
         saldo += debe - haber;
+
         sheet.addRow({
           cuenta: `${cuenta.codigo} - ${cuenta.nombre}`,
           fecha: new Date(linea.asientoContable.fecha),
@@ -842,10 +854,17 @@ export class PrismaReportsRepository implements ReportRepository {
     query: QueryBalanceComprobacion,
   ): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Balance de Comprobación');
+    const fechasFromUtils = baseWhereDate(query.fechaInicio, query.fechaFin);
+
+    this.logger.log(
+      `Fechas retornadas:\n${JSON.stringify(fechasFromUtils, null, 2)}`,
+    );
     const cuentas = await this.prisma.cuentaContable.findMany({
       where: {
         activa: true,
+
         ...(query.cuentaContableId ? { id: query.cuentaContableId } : {}),
+        // ...(query.estado ? { })
       },
       include: {
         lineas: {
@@ -913,6 +932,9 @@ export class PrismaReportsRepository implements ReportRepository {
 
   async reporteEstadoResultados(query: QueryEstadoResultados): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Estado de Resultados');
+    this.logger.log(
+      `DTO recibido en reporteEstadoResultados:\n${JSON.stringify(query, null, 2)}`,
+    );
     const cuentas = await this.prisma.cuentaContable.findMany({
       where: { activa: true },
       include: {
@@ -986,21 +1008,14 @@ export class PrismaReportsRepository implements ReportRepository {
 
   async reporteFlujoCaja(query: QueryFlujoCaja): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Flujo de Caja / Movimientos de Caja');
+    this.logger.log(
+      `DTO recibido en reporteFlujoCaja:\n${JSON.stringify(query, null, 2)}`,
+    );
 
-    const fechaInicio = query.fechaInicio
-      ? new Date(query.fechaInicio)
-      : undefined;
-    const fechaFin = query.fechaFin ? new Date(query.fechaFin) : undefined;
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
 
     const where: Prisma.MovimientoFinancieroWhereInput = {
-      ...(fechaInicio || fechaFin
-        ? {
-            fecha: {
-              ...(fechaInicio ? { gte: fechaInicio } : {}),
-              ...(fechaFin ? { lte: fechaFin } : {}),
-            },
-          }
-        : {}),
+      ...(fechaWhere ? { fecha: fechaWhere } : {}),
 
       ...(query.sucursalId ? { sucursalId: query.sucursalId } : {}),
       ...(query.usuarioId ? { usuarioId: query.usuarioId } : {}),
@@ -1009,12 +1024,10 @@ export class PrismaReportsRepository implements ReportRepository {
         ? { cuentaBancariaId: query.cuentaBancariaId }
         : {}),
 
-      // ✅ ENUMS → igualdad directa
       ...(query.motivo ? { motivo: query.motivo } : {}),
       ...(query.clasificacion ? { clasificacion: query.clasificacion } : {}),
       ...(query.metodoPago ? { metodoPago: query.metodoPago } : {}),
 
-      // ✅ TEXTO libre → contains
       ...(query.search
         ? {
             OR: [
@@ -1096,6 +1109,10 @@ export class PrismaReportsRepository implements ReportRepository {
 
   async reporteEstadoCajaTurno(query: QueryEstadoCajaTurno): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Estado de Caja por Turno');
+    this.logger.log(
+      `DTO recibido en reporteEstadoCajaTurno:\n${JSON.stringify(query, null, 2)}`,
+    );
+
     const cajas = await this.prisma.registroCaja.findMany({
       where: {
         fechaApertura: baseWhereDate(query.fechaInicio, query.fechaFin),
@@ -1170,6 +1187,7 @@ export class PrismaReportsRepository implements ReportRepository {
     query: QueryEstadoCuentaContable,
   ): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Estado de Cuenta Contable');
+
     const cuenta = await this.prisma.cuentaContable.findUnique({
       where: { id: query.cuentaContableId },
       include: {
@@ -1232,22 +1250,18 @@ export class PrismaReportsRepository implements ReportRepository {
     query: QueryEstadoCuentaCliente,
   ): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Estado de Cuenta de Cliente');
+    this.logger.log(`EL QUERY ES:\n${JSON.stringify(query, null, 2)}`);
+
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
 
     const cliente = await this.prisma.cliente.findUnique({
       where: { id: query.clienteId },
       include: {
         VentaCuota: {
           where: {
-            ...(query.fechaInicio || query.fechaFin
+            ...(fechaWhere
               ? {
-                  fechaContrato: {
-                    ...(query.fechaInicio
-                      ? { gte: new Date(query.fechaInicio) }
-                      : {}),
-                    ...(query.fechaFin
-                      ? { lte: new Date(query.fechaFin) }
-                      : {}),
-                  },
+                  fechaContrato: fechaWhere,
                 }
               : {}),
           },
@@ -1330,41 +1344,23 @@ export class PrismaReportsRepository implements ReportRepository {
     query: QueryEstadoCuentaProveedor,
   ): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Estado de Cuenta de Proveedor');
+    this.logger.log(
+      `DTO recibido reporteEstadoCuentaProveedor :\n${JSON.stringify(query, null, 2)}`,
+    );
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
 
     const proveedor = await this.prisma.proveedor.findUnique({
       where: { id: query.proveedorId },
       include: {
         compras: {
           where: {
-            ...(query.fechaInicio || query.fechaFin
-              ? {
-                  fecha: {
-                    ...(query.fechaInicio
-                      ? { gte: new Date(query.fechaInicio) }
-                      : {}),
-                    ...(query.fechaFin
-                      ? { lte: new Date(query.fechaFin) }
-                      : {}),
-                  },
-                }
-              : {}),
+            ...(fechaWhere ? { fecha: fechaWhere } : {}),
           },
           orderBy: { fecha: 'asc' },
         },
         movimientosCaja: {
           where: {
-            ...(query.fechaInicio || query.fechaFin
-              ? {
-                  fecha: {
-                    ...(query.fechaInicio
-                      ? { gte: new Date(query.fechaInicio) }
-                      : {}),
-                    ...(query.fechaFin
-                      ? { lte: new Date(query.fechaFin) }
-                      : {}),
-                  },
-                }
-              : {}),
+            ...(fechaWhere ? { fecha: fechaWhere } : {}),
           },
           orderBy: { fecha: 'asc' },
         },
@@ -1435,21 +1431,13 @@ export class PrismaReportsRepository implements ReportRepository {
 
   async reporteVentas(query: QueryReporteVentas): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Reporte de Ventas');
-
-    const fechaInicio = query.fechaInicio
-      ? new Date(query.fechaInicio)
-      : undefined;
-    const fechaFin = query.fechaFin ? new Date(query.fechaFin) : undefined;
+    this.logger.log(
+      `DTO recibido en reporteVentas:\n${JSON.stringify(query, null, 2)}`,
+    );
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
 
     const where: Prisma.VentaWhereInput = {
-      ...(fechaInicio || fechaFin
-        ? {
-            fechaVenta: {
-              ...(fechaInicio ? { gte: fechaInicio } : {}),
-              ...(fechaFin ? { lte: fechaFin } : {}),
-            },
-          }
-        : {}),
+      ...(fechaWhere ? { fechaVenta: fechaWhere } : {}),
       ...(query.clienteId ? { clienteId: query.clienteId } : {}),
       ...(query.registroCajaId ? { registroCajaId: query.registroCajaId } : {}),
       ...(query.usuarioId ? { usuarioId: query.usuarioId } : {}),
@@ -1511,7 +1499,9 @@ export class PrismaReportsRepository implements ReportRepository {
         cliente: v.cliente
           ? `${v.cliente.nombre}${v.cliente.apellidos ? ' ' + v.cliente.apellidos : ''}`
           : (v.nombreClienteFinal ?? ''),
-        metodoPago: v.metodoPago ? 'Asignado' : 'Sin método', // ajusta al campo real de Pago
+        metodoPago: v.metodoPago.metodoPago
+          ? v.metodoPago.metodoPago
+          : 'Sin método',
         total: toNumber(v.totalVenta),
         caja: v.registroCajaId ?? '',
         sucursal: v.registroCaja?.sucursal?.nombre ?? '',
@@ -1526,28 +1516,20 @@ export class PrismaReportsRepository implements ReportRepository {
     this.excel.finalizeSheet(sh, 4);
     return this.excel.toBuffer(wb);
   }
+
   async reporteGastos(query: QueryReporteGastos): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Reporte de Gastos');
-
-    const fechaInicio = query.fechaInicio
-      ? new Date(query.fechaInicio)
-      : undefined;
-    const fechaFin = query.fechaFin ? new Date(query.fechaFin) : undefined;
+    this.logger.log(
+      `DTO recibido en reporteGastos:\n${JSON.stringify(query, null, 2)}`,
+    );
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
 
     const where: Prisma.MovimientoFinancieroWhereInput = {
-      ...(fechaInicio || fechaFin
-        ? {
-            fecha: {
-              ...(fechaInicio ? { gte: fechaInicio } : {}),
-              ...(fechaFin ? { lte: fechaFin } : {}),
-            },
-          }
-        : {}),
+      ...(fechaWhere ? { fecha: fechaWhere } : {}),
 
       ...(query.sucursalId ? { sucursalId: query.sucursalId } : {}),
       ...(query.usuarioId ? { usuarioId: query.usuarioId } : {}),
 
-      // ✅ ENUMS → igualdad directa (no contains)
       ...(query.motivo ? { motivo: query.motivo as MotivoMovimiento } : {}),
       ...(query.clasificacion
         ? { clasificacion: query.clasificacion as ClasificacionAdmin }
@@ -1556,18 +1538,21 @@ export class PrismaReportsRepository implements ReportRepository {
         ? { metodoPago: query.metodoPago as MetodoPago }
         : {}),
 
-      // ✅ Solo egresos
-      OR: [{ deltaCaja: { lt: 0 } }, { deltaBanco: { lt: 0 } }],
-
-      // ✅ Búsqueda libre (solo en strings)
-      ...(query.search
-        ? {
-            OR: [
-              { descripcion: { contains: query.search, mode: 'insensitive' } },
-              { referencia: { contains: query.search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
+      AND: [
+        {
+          OR: [{ deltaCaja: { lt: 0 } }, { deltaBanco: { lt: 0 } }],
+        },
+        // ...(query.search
+        //   ? [
+        //       {
+        //         OR: [
+        //           // { descripcion: { contains: query.search, mode: 'insensitive' } },
+        //           // { referencia: { contains: query.search, mode: 'insensitive' } },
+        //         ],
+        //       },
+        //     ]
+        //   : []),
+      ],
     };
 
     const movs = await this.prisma.movimientoFinanciero.findMany({
@@ -1699,11 +1684,16 @@ export class PrismaReportsRepository implements ReportRepository {
     query: QueryMovimientosSinAsiento,
   ): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook('Movimientos sin Asiento / sin Regla');
+    this.logger.log(
+      `DTO recibido en reporteMovimientosSinAsiento:\n${JSON.stringify(query, null, 2)}`,
+    );
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
+
     const movs = await this.prisma.movimientoFinanciero.findMany({
       where: {
-        fecha: baseWhereDate(query.fechaInicio, query.fechaFin),
+        ...(fechaWhere ? { fecha: fechaWhere } : {}),
         asientoContableId: null,
-        sucursalId: query.sucursalId,
+        ...(query.sucursalId ? { sucursalId: query.sucursalId } : {}),
       },
       include: { sucursal: true, usuario: true },
       orderBy: { fecha: 'asc' },
@@ -1739,16 +1729,24 @@ export class PrismaReportsRepository implements ReportRepository {
     this.excel.finalizeSheet(sh, 4);
     return this.excel.toBuffer(wb);
   }
-
   async reporteEstadoBancario(query: QueryEstadoBancario): Promise<Buffer> {
     const { wb, sh } = this.baseWorkbook(
       'Estado Bancario / Flujo por cuenta bancaria',
     );
+
+    this.logger.log(
+      `DTO recibido reporteEstadoBancario:\n${JSON.stringify(query, null, 2)}`,
+    );
+
+    const fechaWhere = baseWhereDate(query.fechaInicio, query.fechaFin);
+
     const movs = await this.prisma.movimientoFinanciero.findMany({
       where: {
-        fecha: baseWhereDate(query.fechaInicio, query.fechaFin),
-        cuentaBancariaId: query.cuentaBancariaId,
-        sucursalId: query.sucursalId,
+        ...(fechaWhere ? { fecha: fechaWhere } : {}),
+        ...(query.cuentaBancariaId
+          ? { cuentaBancariaId: query.cuentaBancariaId }
+          : {}),
+        ...(query.sucursalId ? { sucursalId: query.sucursalId } : {}),
       },
       include: { cuentaBancaria: true, sucursal: true, usuario: true },
       orderBy: { fecha: 'asc' },
@@ -1771,6 +1769,7 @@ export class PrismaReportsRepository implements ReportRepository {
     for (const m of movs) {
       const deltaBanco = toNumber(m.deltaBanco);
       saldo += deltaBanco;
+
       sh.addRow({
         fecha: new Date(m.fecha),
         banco: m.cuentaBancaria?.banco ?? '',

@@ -120,6 +120,9 @@ export class ExcelReportsController {
     @Body() dto: QueryBalanceComprobacion,
     @Res() res: Response,
   ) {
+    this.logger.log(
+      `DTO recibido en balanceComprobacion:\n${JSON.stringify(dto, null, 2)}`,
+    );
     const buffer =
       await this.excelReportsService.reportBalanceComprobacion(dto);
     return this.sendXlsx(

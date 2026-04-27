@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   EstadoAsientoContable,
   OrigenAsientoContable,
@@ -21,6 +21,7 @@ export class PrismaAsientoContableRepository
   implements AsientoContableRepository
 {
   constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PrismaAsientoContableRepository.name);
 
   async save(
     entity: AsientoContable,
@@ -138,7 +139,15 @@ export class PrismaAsientoContableRepository
         })),
       };
     });
-
+    const pageCount = Math.ceil(total / pageSize);
+    this.logger.log(
+      'Los dato de la tabla y paginacion son: ',
+      data,
+      total,
+      page,
+      pageSize,
+      pageCount,
+    );
     return {
       data,
       total,

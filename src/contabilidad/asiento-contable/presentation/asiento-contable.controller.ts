@@ -7,13 +7,13 @@ import {
   Body,
   Get,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { CreateAsientoContableDto } from '../dto/dto';
 import { EstadoAsientoContable, OrigenAsientoContable } from '@prisma/client';
 @Controller('asientos-contables')
 export class AsientoContableController {
   constructor(private readonly service: AsientoContableService) {}
-
   @Post()
   async crear(@Body() dto: CreateAsientoContableDto) {
     return this.service.crearAsiento(dto);
