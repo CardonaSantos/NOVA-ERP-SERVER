@@ -149,10 +149,10 @@ export class CuentaContable {
   }
 
   private validateCodigo(codigo: string): void {
-    const regex = /^[0-9]+(\.[0-9]+)*$/;
-
-    if (!codigo || !regex.test(codigo)) {
-      throw new Error('Código inválido. Ej: 1, 1.1, 1.1.01');
-    }
+    // console.log('Codigo usado', codigo);
+    // const regex = /^[0-9]+(\.[0-9]+)*$/;
+    // if (!codigo || !regex.test(codigo)) {
+    //   throw new Error('Código inválido. Ej: 1, 1.1, 1.1.01');
+    // }
   }
 }

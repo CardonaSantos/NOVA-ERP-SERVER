@@ -63,6 +63,21 @@ export class MovimientoFinancieroService {
     return this.crearMovimiento(dto, arg);
   }
 
+  private mapearOrigenDesdeMotivo(
+    motivo: MotivoMovimiento,
+  ): OrigenAsientoContable {
+    switch (motivo) {
+      case MotivoMovimiento.COMPRA_MERCADERIA:
+        return OrigenAsientoContable.COMPRA;
+
+      case MotivoMovimiento.VENTA:
+        return OrigenAsientoContable.VENTA;
+
+      default:
+        return OrigenAsientoContable.MOVIMIENTO_FINANCIERO;
+    }
+  }
+
   private async crearMovimientoCore(
     dto: CrearMovimientoDto,
     tx: Prisma.TransactionClient,
@@ -133,7 +148,8 @@ export class MovimientoFinancieroService {
 
     const regla = await this.reglaContableService.resolverRegla(
       {
-        origen: OrigenAsientoContable.MOVIMIENTO_FINANCIERO,
+        // origen: OrigenAsientoContable.MOVIMIENTO_FINANCIERO,
+        origen: this.mapearOrigenDesdeMotivo(dto.motivo),
         clasificacion: effects.clasificacion,
         motivo: dto.motivo,
         metodoPago: dto.metodoPago,

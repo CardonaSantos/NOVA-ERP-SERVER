@@ -1344,46 +1344,70 @@ export class PurchaseRequisitionsService {
             }
           }
 
-          MFCostosVentas = await this.mf.createMovimiento({
-            usuarioId: dto.usuarioId,
-            proveedorId: dto.proveedorId ?? undefined,
-            monto: mfPayload.monto!,
-            motivo: 'COSTO_ASOCIADO',
-            metodoPago: metodoMF,
-            descripcion: mfPayload.descripcion,
-            sucursalId: mfPayload.sucursalId ?? sucursalId,
-            costoVentaTipo: mfPayload.costoVentaTipo,
-            // clasificacionAdmin: 'COSTO_VENTA',
-            cuentaBancariaId: Number.isFinite(Number(cuentaBancariaIdMF))
-              ? Number(cuentaBancariaIdMF)
-              : undefined,
-            registroCajaId: Number.isFinite(Number(registroCajaIdMF))
-              ? Number(registroCajaIdMF)
-              : undefined,
-          });
+          MFCostosVentas = await this.mf.createMovimiento(
+            {
+              usuarioId: dto.usuarioId,
+              proveedorId: dto.proveedorId ?? undefined,
+              monto: mfPayload.monto!,
+              motivo: 'COSTO_ASOCIADO',
+              metodoPago: metodoMF,
+              descripcion: mfPayload.descripcion,
+              sucursalId: mfPayload.sucursalId ?? sucursalId,
+              costoVentaTipo: mfPayload.costoVentaTipo,
+              // clasificacionAdmin: 'COSTO_VENTA',
+              cuentaBancariaId: Number.isFinite(Number(cuentaBancariaIdMF))
+                ? Number(cuentaBancariaIdMF)
+                : undefined,
+              registroCajaId: Number.isFinite(Number(registroCajaIdMF))
+                ? Number(registroCajaIdMF)
+                : undefined,
+            },
+            tx,
+          );
         } // si no hay MF, seguimos sin error
 
         // Movimiento financiero de la compra (siempre)
-        await tx.movimientoFinanciero.create({
-          data: {
-            fecha: dayjs().tz(TZGT).toDate(),
-            sucursalId,
-            clasificacion: 'COSTO_VENTA',
+        // await tx.movimientoFinanciero.create({
+        //   data: {
+        //     fecha: dayjs().tz(TZGT).toDate(),
+        //     sucursalId,
+        //     clasificacion: 'COSTO_VENTA',
+        //     motivo: 'COMPRA_MERCADERIA',
+        //     metodoPago: metodo,
+        //     deltaCaja,
+        //     deltaBanco,
+        //     afectaInventario: true,
+        //     costoVentaTipo: 'MERCADERIA',
+        //     referencia: `COMPRA#${compra.id}`,
+        //     descripcion: `Compra #${compra.id} - recepción a stock`,
+        //     cuentaBancariaId: cuentaBancariaIdLocal,
+        //     registroCajaId,
+        //     proveedorId: compra.proveedor?.id ?? null,
+        //     usuarioId: dto.usuarioId,
+        //     conFactura: (compra as any).conFactura ?? undefined,
+        //   },
+        // });
+
+        await this.mf.createMovimiento(
+          {
+            usuarioId: dto.usuarioId,
+            proveedorId: compra.proveedor?.id ?? undefined,
+            monto: montoRecepcion,
             motivo: 'COMPRA_MERCADERIA',
             metodoPago: metodo,
-            deltaCaja,
-            deltaBanco,
-            afectaInventario: true,
-            costoVentaTipo: 'MERCADERIA',
-            referencia: `COMPRA#${compra.id}`,
+            // gastoOperativoTipo: '',
+
             descripcion: `Compra #${compra.id} - recepción a stock`,
+            sucursalId,
             cuentaBancariaId: cuentaBancariaIdLocal,
             registroCajaId,
-            proveedorId: compra.proveedor?.id ?? null,
-            usuarioId: dto.usuarioId,
-            conFactura: (compra as any).conFactura ?? undefined,
+            costoVentaTipo: 'MERCADERIA',
+            // clasificacionAdmin: '',
+            referencia: `COMPRA#${compra.id}`,
+            // gastoOperativoTipo: ''
           },
-        });
+          tx,
+        );
 
         this.logger.log(
           'El costo asociado de la compra (si hubo): ',

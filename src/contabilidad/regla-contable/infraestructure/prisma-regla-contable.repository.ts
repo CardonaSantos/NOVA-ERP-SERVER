@@ -97,41 +97,7 @@ export class PrismaReglaContableRepository implements ReglaContableRepository {
   }
 
   // 🔥 MÉTODO CLAVE
-  //   async findByContext(params: {
-  //     origen: OrigenAsientoContable;
-  //     clasificacion?: ClasificacionAdmin;
-  //     motivo?: MotivoMovimiento;
-  //     metodoPago?: MetodoPago;
-  //   }): Promise<ReglaContable[]> {
-  //     const records = await this.prisma.reglaContable.findMany({
-  //       where: {
-  //         origen: params.origen,
-  //         activa: true,
 
-  //         OR: [
-  //           { clasificacion: params.clasificacion ?? undefined },
-  //           { clasificacion: null },
-  //         ],
-
-  //         AND: [
-  //           {
-  //             OR: [{ motivo: params.motivo ?? undefined }, { motivo: null }],
-  //           },
-  //           {
-  //             OR: [
-  //               { metodoPago: params.metodoPago ?? undefined },
-  //               { metodoPago: null },
-  //             ],
-  //           },
-  //         ],
-  //       },
-  //       orderBy: {
-  //         prioridad: 'asc',
-  //       },
-  //     });
-
-  //     return records.map(ReglaContableMapper.toDomain);
-  //   }
   async findByContext(
     params: {
       origen: OrigenAsientoContable;
@@ -157,7 +123,7 @@ export class PrismaReglaContableRepository implements ReglaContableRepository {
     }
 
     if (params.metodoPago !== undefined) {
-      where.metodoPago = params.metodoPago;
+      where.OR = [{ metodoPago: params.metodoPago }, { metodoPago: null }];
     }
 
     const records = await prismaClient.reglaContable.findMany({

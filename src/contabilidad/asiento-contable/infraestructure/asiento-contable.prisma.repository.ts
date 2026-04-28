@@ -139,15 +139,7 @@ export class PrismaAsientoContableRepository
         })),
       };
     });
-    const pageCount = Math.ceil(total / pageSize);
-    this.logger.log(
-      'Los dato de la tabla y paginacion son: ',
-      data,
-      total,
-      page,
-      pageSize,
-      pageCount,
-    );
+    this.logger.log(`where recibido:\n${JSON.stringify(where, null, 2)}`);
     return {
       data,
       total,

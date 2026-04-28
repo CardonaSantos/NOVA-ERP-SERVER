@@ -198,6 +198,7 @@ export class ReglaContableService {
     tx?: Prisma.TransactionClient,
   ): Promise<ReglaContable> {
     try {
+      this.logger.debug('Contexto resolver:', contexto);
       const candidatas = await this.repo.findByContext(contexto, tx);
 
       if (!candidatas.length) {
