@@ -27,6 +27,7 @@ import {
   metodoPagoFromComprobante,
   toComprobanteNumero,
 } from './utils/helpers';
+import { ContabilizacionVentasService } from './contabilizacion.service';
 
 type Paginated<T> = {
   total: number;
@@ -42,6 +43,7 @@ export class CajaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly utilities: UtilitiesService,
+    private readonly contabilizacionVentasService: ContabilizacionVentasService,
   ) {}
   private toNum(n: any): number {
     return n == null ? 0 : Number(n);
@@ -268,13 +270,12 @@ export class CajaService {
     this.logger = this.logger ?? new Logger('CajaService');
     this.logger.log('El dto es: ', dto);
 
-    const CASH_LIKE = ['EFECTIVO', 'CONTADO', 'CHEQUE'] as const;
     const n = (v: any) => Number(v ?? 0);
     const r2 = (x: number) => Math.round(x * 100) / 100;
     const ahora = dayjs().tz(TZGT).toDate();
 
     return this.prisma.$transaction(async (tx) => {
-      // 1) Turno vigente
+      // VALIDAR TURNO
       const turno = await tx.registroCaja.findUnique({
         where: { id: dto.registroCajaId },
         select: {
@@ -286,27 +287,15 @@ export class CajaService {
           fechaApertura: true,
         },
       });
+
       if (!turno || turno.estado !== 'ABIERTO') {
         throw new BadRequestException('Turno no encontrado o ya cerrado');
       }
 
-      // 2) ASIENTO de ventas EFECTIVO por DIFERENCIA (idempotente)
+      // ASENTAR VENTAS EFECTIVO (IDEMPOTENTE)
       let ventasEfectivoTurno = 0;
-      if (dto.asentarVentas !== false) {
-        // ✅ solo ventas EFECTIVO ligadas a ESTA caja/turno
-        // const pagosAgg = await tx.pago.aggregate({
-        //   _sum: { monto: true },
-        //   where: {
-        //     venta: {
-        //       is: {
-        //         registroCajaId: turno.id, // 👈 clave
-        //         fechaVenta: { gte: turno.fechaApertura, lte: ahora },
-        //       },
-        //     },
-        //     metodoPago: { in: CASH_LIKE as any },
-        //   },
-        // });
 
+      if (dto.asentarVentas !== false) {
         const pagosAgg = await tx.pago.aggregate({
           _sum: { monto: true },
           where: {
@@ -317,39 +306,27 @@ export class CajaService {
                 ventaCuota: null,
               },
             },
-            // Si quieres considerar solo efectivo:
-            // metodoPago: 'EFECTIVO',
-            // Si quieres tratar CHEQUE como efectivo (si así operan físicamente), usa:
             metodoPago: { in: ['EFECTIVO', 'CONTADO'] },
           },
         });
 
         ventasEfectivoTurno = n(pagosAgg._sum.monto);
 
-        // 2.2 cuánto ya está en MF como venta POS (excluye asientos)
         const yaRegAgg = await tx.movimientoFinanciero.aggregate({
           _sum: { deltaCaja: true },
           where: {
             registroCajaId: turno.id,
-            // si "clasificacion" es enum, puedes filtrar también por ella; no es imprescindible
             motivo: MotivoMovimiento.VENTA,
-            esAsientoVentas: { not: true }, // <-- POS (no asiento)
+            esAsientoVentas: { not: true },
             deltaCaja: { gt: 0 },
           } as Prisma.MovimientoFinancieroWhereInput,
         });
-        const yaRegistradoPOS = n(yaRegAgg._sum.deltaCaja);
 
-        // 2.3 diferencia a cubrir por asiento
+        const yaRegistradoPOS = n(yaRegAgg._sum.deltaCaja);
         const faltante = Math.max(0, r2(ventasEfectivoTurno - yaRegistradoPOS));
 
-        this.logger.log(
-          `[CierreCaja] turno=${turno.id} ` +
-            `ventasEfectivoTurno=${ventasEfectivoTurno} ` +
-            `yaRegistradoPOS=${yaRegistradoPOS} ` +
-            `faltante=${Math.max(0, r2(ventasEfectivoTurno - yaRegistradoPOS))}`,
-        );
-
         const refAsiento = `SYS:ASIENTO_VENTAS_TURNO_${turno.id}`;
+
         const asientoPrev = await tx.movimientoFinanciero.findUnique({
           where: {
             registroCajaId_referencia: {
@@ -372,44 +349,77 @@ export class CajaService {
               sucursalId: turno.sucursalId,
               registroCajaId: turno.id,
               fecha: ahora,
-              clasificacion: 'INGRESO', // ajusta a tu enum si aplica
+              clasificacion: 'INGRESO',
               motivo: MotivoMovimiento.VENTA,
               deltaCaja: r2(faltante),
               deltaBanco: 0,
               referencia: refAsiento,
               esAsientoVentas: true,
-              descripcion: 'Asiento de ventas efectivo (ajuste por diferencia)',
+              descripcion: 'Asiento de ventas efectivo (ajuste)',
               usuarioId: dto.usuarioCierreId,
             },
-            update: { fecha: ahora, deltaCaja: r2(faltante) },
+            update: {
+              fecha: ahora,
+              deltaCaja: r2(faltante),
+            },
           });
         } else if (asientoPrev) {
-          // si no falta nada, elimina asiento previo para no contaminar reportes
           await tx.movimientoFinanciero.delete({
             where: { id: asientoPrev.id },
           });
         }
       }
 
-      // 3) Efectivo en caja tras asiento (sumar TODO, sin filtros especiales)
+      //  CALCULAR EN CAJA
       const aggCaja = await tx.movimientoFinanciero.aggregate({
         _sum: { deltaCaja: true },
         where: { registroCajaId: turno.id },
       });
+
       const enCaja = r2(n(turno.saldoInicial) + n(aggCaja._sum.deltaCaja));
 
-      // 4) Política de base y disponible a depositar
+      //  VALIDAR EFECTIVO CONTADO
+      if (dto.efectivoContado != null && dto.efectivoContado < 0) {
+        throw new BadRequestException('Efectivo contado inválido');
+      }
+
+      // CALCULAR DIFERENCIA (ARQUEO)
+      let diferencia = 0;
+      let estadoCuadre: 'CUADRA' | 'SOBRANTE' | 'FALTANTE' | null = null;
+
+      if (dto.efectivoContado != null) {
+        diferencia = r2(dto.efectivoContado - enCaja);
+
+        if (Math.abs(diferencia) <= 0.01) {
+          estadoCuadre = 'CUADRA';
+        } else if (diferencia > 0) {
+          estadoCuadre = 'SOBRANTE';
+        } else {
+          estadoCuadre = 'FALTANTE';
+        }
+
+        if (estadoCuadre !== 'CUADRA' && !dto.comentarioFinal) {
+          throw new BadRequestException(
+            'Debe ingresar comentario si hay diferencia en caja',
+          );
+        }
+      }
+
+      //  BASE Y DISPONIBLE
       const baseDeseada = r2(
         Math.max(0, n(dto.dejarEnCaja ?? turno.fondoFijo ?? 0)),
       );
+
       const disponibleParaDepositar = Math.max(0, r2(enCaja - baseDeseada));
 
-      // 5) Determinar monto de depósito según modo
+      // CALCULAR DEPÓSITO
       let montoDeposito = 0;
+
       switch (dto.modo) {
         case 'DEPOSITO_TODO':
           montoDeposito = disponibleParaDepositar;
           break;
+
         case 'DEPOSITO_PARCIAL':
           if (!dto.montoParcial || dto.montoParcial <= 0) {
             throw new BadRequestException('Monto parcial inválido');
@@ -419,15 +429,19 @@ export class CajaService {
             r2(n(dto.montoParcial)),
           );
           break;
+
         case 'SIN_DEPOSITO':
         case 'CAMBIO_TURNO':
           montoDeposito = 0;
           break;
+
         default:
           throw new BadRequestException('Modo de cierre no soportado');
       }
+
       montoDeposito = r2(montoDeposito);
 
+      //  VALIDACIONES DEPÓSITO
       if (montoDeposito > 0 && !dto.cuentaBancariaId) {
         throw new BadRequestException(
           'Cuenta bancaria requerida para depósito',
@@ -447,12 +461,14 @@ export class CajaService {
         }
       }
 
-      // 6) Crear movimiento de depósito (si corresponde)
+      // CREAR DEPÓSITO
       let movDeposito: any = null;
+
       if (montoDeposito > 0.01) {
         const metodoPagoMF = metodoPagoFromComprobante(
           dto.comprobanteTipo as any,
         );
+
         const compNumero = toComprobanteNumero(dto.comprobanteNumero);
 
         movDeposito = await tx.movimientoFinanciero.create({
@@ -460,10 +476,8 @@ export class CajaService {
             sucursalId: turno.sucursalId,
             registroCajaId: turno.id,
             fecha: ahora,
-            clasificacion: 'TRANSFERENCIA', // ajusta a tu enum si aplica
-            motivo: 'DEPOSITO_CIERRE', // idem
-            // metodoPago: 'TRANSFERENCIA',
-            // metodoPago: 'TRANSFERENCIA',
+            clasificacion: 'TRANSFERENCIA',
+            motivo: 'DEPOSITO_CIERRE',
             metodoPago: metodoPagoMF,
             deltaCaja: -montoDeposito,
             deltaBanco: +montoDeposito,
@@ -471,7 +485,6 @@ export class CajaService {
             esDepositoCierre: true,
             descripcion: 'Depósito de cierre de turno',
             usuarioId: dto.usuarioCierreId,
-            //comprobante
             comprobanteTipo: dto.comprobanteTipo as any,
             comprobanteNumero: compNumero,
             comprobanteFecha: dto.comprobanteFecha ?? ahora,
@@ -479,13 +492,15 @@ export class CajaService {
         });
       }
 
-      // 7) Cerrar turno (saldo final post-depósito) + snapshots
+      // SALDO FINAL
       const aggCaja2 = await tx.movimientoFinanciero.aggregate({
         _sum: { deltaCaja: true },
         where: { registroCajaId: turno.id },
       });
+
       const saldoFinal = r2(n(turno.saldoInicial) + n(aggCaja2._sum.deltaCaja));
 
+      // CERRAR TURNO
       const cerrado = await tx.registroCaja.update({
         where: { id: turno.id },
         data: {
@@ -494,24 +509,31 @@ export class CajaService {
           saldoFinal,
           comentarioFinal: dto.comentarioFinal ?? null,
           depositado: montoDeposito > 0,
+
+          // NUEVO
+          efectivoContado: dto.efectivoContado ?? null,
+          diferenciaCaja: dto.efectivoContado != null ? diferencia : null,
+          estadoCuadre,
         },
       });
 
-      // Snapshots (día sucursal y global) — NO filtran ventas POS
+      //  SNAPSHOTS
       await this.upsertSucursalSnapshot(tx, turno.sucursalId, ahora);
       await this.refreshGlobalSnapshot(tx, ahora);
 
-      // 8) Apertura de siguiente turno (opcional)
+      // NUEVO TURNO (OPCIONAL)
       let nuevoTurno: any = null;
+
       if (dto.modo === 'CAMBIO_TURNO' && (dto.abrirSiguiente ?? true)) {
         const nextUser = dto.usuarioInicioSiguienteId ?? dto.usuarioCierreId;
+
         const nextFondo = n(dto.fondoFijoSiguiente ?? turno.fondoFijo ?? 0);
 
         nuevoTurno = await tx.registroCaja.create({
           data: {
             sucursalId: turno.sucursalId,
             usuarioInicioId: nextUser,
-            saldoInicial: saldoFinal, // arrastra lo que quedó (normalmente = base)
+            saldoInicial: saldoFinal,
             fondoFijo: nextFondo,
             comentario:
               dto.comentarioAperturaSiguiente ?? 'Apertura por cambio de turno',
@@ -520,25 +542,23 @@ export class CajaService {
         });
       }
 
-      // 9) Warnings útiles para UI
+      // WARNINGS
       const warnings: string[] = [];
+
       if (dto.asentarVentas !== false && saldoFinal < 0) {
         warnings.push('Saldo de caja quedó negativo.');
       }
+
       if (dto.modo === 'DEPOSITO_TODO' && saldoFinal > 0.01) {
-        warnings.push(
-          'Quedó efectivo en caja pese a "Depositar todo" (posible base > 0).',
-        );
+        warnings.push('Quedó efectivo en caja pese a "Depositar todo".');
       }
 
       this.logger.log(
-        `[CierreCaja] turno=${turno.id} ` +
-          `enCajaAntes=${enCaja} baseDeseada=${baseDeseada} disponible=${disponibleParaDepositar} ` +
-          `montoDeposito=${montoDeposito}`,
+        `[CierreCaja] turno=${turno.id} enCaja=${enCaja} base=${baseDeseada} deposito=${montoDeposito}`,
       );
 
       this.logger.log(
-        `[CierreCaja] turno=${turno.id} saldoFinal=${saldoFinal} (esperado≈base ${baseDeseada})`,
+        `[CierreCaja] turno=${turno.id} saldoFinal=${saldoFinal}`,
       );
 
       return {
@@ -546,6 +566,9 @@ export class CajaService {
           id: cerrado.id,
           saldoFinal,
           depositoRealizado: montoDeposito,
+          efectivoContado: dto.efectivoContado ?? null,
+          diferenciaCaja: dto.efectivoContado != null ? diferencia : null,
+          estadoCuadre,
         },
         movimientos: { deposito: movDeposito },
         cajas: {
@@ -553,13 +576,14 @@ export class CajaService {
           baseDejada: baseDeseada,
           disponibleParaDepositar,
         },
-        ventas: { efectivoTurno: r2(ventasEfectivoTurno) },
+        ventas: {
+          efectivoTurno: r2(ventasEfectivoTurno),
+        },
         nuevoTurno,
         warnings,
       };
     });
   }
-
   /**
    * Saldo inicial sugerido:
    * - Si hay turno cerrado más reciente: usar su saldoFinal.
@@ -1015,7 +1039,7 @@ export class CajaService {
 
     const whereCaja: Prisma.RegistroCajaWhereInput = {};
 
-    if (dto.sucursalId) whereCaja.sucursalId = dto.sucursalId;
+    // if (dto.sucursalId) whereCaja.sucursalId = Number(dto.sucursalId);
     if (dto.estado) whereCaja.estado = dto.estado as EstadoTurnoCaja;
 
     if (typeof dto.depositado === 'string') {
@@ -1230,7 +1254,15 @@ export class CajaService {
     };
   }
 
-  // CajaService
+  /**
+   *
+   * @param tx
+   * @param ventaId
+   * @param sucursalId
+   * @param usuarioId
+   * @param opts
+   * @returns
+   */
   async attachAndRecordSaleTx(
     tx: Prisma.TransactionClient,
     ventaId: number,
@@ -1315,33 +1347,42 @@ export class CajaService {
     //   });
     // }
 
-    if (!esCredito && venta.totalVenta > 0) {
-      const afectaCaja = esEfectivo && !!turno;
-      const deltaCaja = afectaCaja ? venta.totalVenta : 0;
-      const deltaBanco = !esEfectivo ? venta.totalVenta : 0;
+    // if (!esCredito && venta.totalVenta > 0) {
+    //   const afectaCaja = esEfectivo && !!turno;
+    //   const deltaCaja = afectaCaja ? venta.totalVenta : 0;
+    //   const deltaBanco = !esEfectivo ? venta.totalVenta : 0;
 
-      if (deltaCaja > 0 || deltaBanco > 0) {
-        await tx.movimientoFinanciero.create({
-          data: {
-            fecha: new Date(),
-            sucursalId,
-            registroCajaId: afectaCaja ? turno!.id : null,
-            clasificacion: 'INGRESO',
-            motivo: 'VENTA',
-            metodoPago: metodo,
-            deltaCaja,
-            deltaBanco,
-            descripcion: `Venta #${venta.id}`,
-            referencia: venta.referenciaPago ?? null,
-            usuarioId: usuarioId ?? venta.usuarioId,
-            esDepositoCierre: false,
-            esDepositoProveedor: false,
-            afectaInventario: false,
-          },
-        });
-      }
-    }
-
+    //   if (deltaCaja > 0 || deltaBanco > 0) {
+    //     await tx.movimientoFinanciero.create({
+    //       data: {
+    //         fecha: new Date(),
+    //         sucursalId,
+    //         registroCajaId: afectaCaja ? turno!.id : null,
+    //         clasificacion: 'INGRESO',
+    //         motivo: 'VENTA',
+    //         metodoPago: metodo,
+    //         deltaCaja,
+    //         deltaBanco,
+    //         descripcion: `Venta #${venta.id}`,
+    //         referencia: venta.referenciaPago ?? null,
+    //         usuarioId: usuarioId ?? venta.usuarioId,
+    //         esDepositoCierre: false,
+    //         esDepositoProveedor: false,
+    //         afectaInventario: false,
+    //       },
+    //     });
+    //   }
+    // }
+    await this.contabilizacionVentasService.registrarVentaTx(tx, {
+      ventaId: venta.id,
+      sucursalId,
+      usuarioId: usuarioId ?? venta.usuarioId,
+      totalVenta: Number(venta.totalVenta),
+      metodoPago: metodo as MetodoPago,
+      registroCajaId: shouldLinkCaja ? turno!.id : null,
+      referencia: venta.referenciaPago ?? null,
+      descripcion: `Venta #${venta.id}`,
+    });
     return { ventaId: venta.id, registroCajaId: turno?.id ?? null };
   }
 
@@ -1557,7 +1598,15 @@ export class CajaService {
       },
     });
   }
-  //servicio utilitario
+
+  /**
+   *
+   * @param tx
+   * @param metodoPago
+   * @param usuarioId
+   * @param sucursalId
+   * @param monto
+   */
   async generateMovimientoFinanciero(
     tx: Prisma.TransactionClient,
     metodoPago: MetodoPago,

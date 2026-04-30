@@ -1,18 +1,11 @@
+import { CostoVentaTipo, GastoOperativoTipo } from '@prisma/client';
+
 export type CostoAsociadoTipo =
   | 'FLETE'
   | 'ENCOMIENDA'
   | 'TRANSPORTE'
   | 'OTROS'
   | 'MERCADERIA';
-export type GastoOperativoTipo =
-  | 'SALARIO'
-  | 'ENERGIA'
-  | 'LOGISTICA'
-  | 'RENTA'
-  | 'INTERNET'
-  | 'PUBLICIDAD'
-  | 'VIATICOS'
-  | 'OTROS';
 
 export interface DetalleMovimiento {
   id: number;
@@ -143,14 +136,6 @@ export interface GO_Resumen {
   porFactura: { conFactura: number; sinFactura: number };
   proveedoresTop: { proveedorId: number; nombre: string; total: number }[];
 }
-
-// COSTO VENTAS HISTORICOS
-type CostoVentaTipo =
-  | 'MERCADERIA'
-  | 'FLETE'
-  | 'ENCOMIENDA'
-  | 'TRANSPORTE'
-  | 'OTROS';
 
 export interface CV_Detalle {
   id: number;

@@ -11,6 +11,8 @@ export interface CerrarCajaV3Dto {
   usuarioCierreId: number;
   comentarioFinal?: string;
 
+  efectivoContado?: number;
+  comentarioCuadre?: string;
   // Depósito
   modo: CierreModo;
   cuentaBancariaId?: number; // requerido si deposito > 0

@@ -8,6 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { StockService } from './stock.service';
 import { CreateStockDto, StockEntryDTO } from './dto/create-stock.dto';
@@ -18,6 +19,7 @@ import { UpdateStockDatesDto } from './update-stock-dates';
 
 @Controller('stock')
 export class StockController {
+  private readonly logger = new Logger(StockController.name);
   constructor(private readonly stockService: StockService) {}
 
   @Post()
@@ -56,6 +58,7 @@ export class StockController {
   async updateStockDates(
     @Body() dto: UpdateStockDatesDto,
   ): Promise<StockToEditResponse> {
+    this.logger.log(`DTO recibido en update:\n${JSON.stringify(dto, null, 2)}`);
     return this.stockService.updateStockDates(dto);
   }
 

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -535,6 +536,25 @@ export class MovimientosCajasService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Fatal error: Error inesperado');
+    }
+  }
+
+  /**
+   * ELIMINARCION DE MOVIMIENTO
+   * @param id
+   * @returns
+   */
+  async remove(id: number) {
+    try {
+      if (!id) throw new BadRequestException('ID NO VÁLIDO');
+      const record = await this.prisma.movimientoFinanciero.delete({
+        where: {
+          id,
+        },
+      });
+      return record;
+    } catch (error) {
+      throw error;
     }
   }
 }

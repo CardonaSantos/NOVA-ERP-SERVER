@@ -10,8 +10,8 @@ export class UpdateStockDatesDto {
   @IsInt()
   id: number;
 
-  @IsEnum(StockKindEnum, { message: 'kind debe ser PRODUCTO o PRESENTACION' })
-  kind: StockKindEnum;
+  @IsInt()
+  cantidad: number;
 
   @IsISO8601({}, { message: 'fechaIngreso debe ser ISO-8601' })
   fechaIngreso: string;

@@ -21,9 +21,8 @@ export type GenerateStockPresentacionDto = {
   fechaIngreso: Date;
   fechaVencimiento?: Date | null;
   requisicionRecepcionId?: number;
-  // 👇 NUEVOS (para base costo)
-  precioCosto: number; // costo unitario de la presentación
-  costoTotal: number; // costoTotal del lote (precioCosto * cantidadPresentacion)
+  precioCosto: number;
+  costoTotal: number;
 };
 
 @Injectable()
@@ -111,9 +110,6 @@ export class UtilitiesService {
         throw new BadRequestException('cantidadPresentacion debe ser > 0');
       }
       if (!(d.costoTotal > 0) || !(d.precioCosto > 0)) {
-        // Si te llega uno de los dos en 0 por error de front:
-        // intenta derivar precioCosto o costoTotal.
-        // (Puedes hacerlo más estricto si prefieres)
         const precio = d.precioCosto || d.costoTotal / d.cantidadPresentacion;
         const total = d.costoTotal || precio * d.cantidadPresentacion;
         d.precioCosto = Number(precio.toFixed(4));
@@ -135,7 +131,6 @@ export class UtilitiesService {
             requisicionRecepcion: sp.requisicionRecepcionId
               ? { connect: { id: sp.requisicionRecepcionId } }
               : undefined,
-            // 👇 NUEVO: claves para prorrateo en base COSTO
             precioCosto: sp.precioCosto,
             costoTotal: sp.costoTotal,
           },
@@ -168,8 +163,6 @@ export class UtilitiesService {
 
     return { created, totalCosto, totalCantidad };
   }
-
-  //SERVICIOS DE UTILIDADES PARA TRUNCAR MOVIMIENTOS MAYORES Y EVITAR CAJAS NEGATIVAS
 
   // Dentro de tu servicio de Caja
   async getCajaEstado(tx: Prisma.TransactionClient, registroCajaId: number) {
@@ -237,6 +230,4 @@ export class UtilitiesService {
       );
     }
   }
-
-  //ADICION DE STOCKS
 }

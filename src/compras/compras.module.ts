@@ -8,15 +8,17 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { ProrrateoService } from 'src/prorrateo/prorrateo.service';
 import { MovimientoFinancieroService } from 'src/movimiento-financiero/movimiento-financiero.service';
+import { MovimientoFinancieroModule } from 'src/movimiento-financiero/movimiento-financiero.module';
 
 @Module({
   controllers: [ComprasController],
-  providers: [ComprasService, ProrrateoService, MovimientoFinancieroService],
+  providers: [ComprasService, ProrrateoService],
   imports: [
     RecepcionesModule,
     ComprasPagosModule,
     DocumentoModule,
     PrismaModule,
+    MovimientoFinancieroModule,
   ],
 })
 export class ComprasModule {}

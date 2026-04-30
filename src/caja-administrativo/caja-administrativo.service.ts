@@ -481,6 +481,16 @@ export class CajaAdministrativoService {
       PUBLICIDAD: 0,
       VIATICOS: 0,
       OTROS: 0,
+      COMBUSTIBLE: 0,
+      COMISIONES: 0,
+      HERRAMIENTAS: 0,
+      IMPUESTOS: 0,
+      LIMPIEZA: 0,
+      MANTENIMIENTO: 0,
+      PAPELERIA: 0,
+      REPUESTOS: 0,
+      SEGUROS: 0,
+      SERVICIOS_TECNICOS: 0,
     };
 
     let totalGeneral = 0;
@@ -811,6 +821,16 @@ export class CajaAdministrativoService {
       PUBLICIDAD: 0,
       VIATICOS: 0,
       OTROS: 0,
+      COMBUSTIBLE: 0,
+      COMISIONES: 0,
+      HERRAMIENTAS: 0,
+      IMPUESTOS: 0,
+      LIMPIEZA: 0,
+      MANTENIMIENTO: 0,
+      PAPELERIA: 0,
+      REPUESTOS: 0,
+      SEGUROS: 0,
+      SERVICIOS_TECNICOS: 0,
     };
 
     let ajustesSobrantes = 0;

@@ -12,6 +12,7 @@ import { TimeoutError } from 'rxjs';
 import { Prisma } from '@prisma/client';
 import { PageOptionsDto } from 'src/utils/page-options';
 import { CajaRegistrosQueryDto } from './dto/dto-caja-request';
+import { parseDecimal } from 'src/utils/parseDecimal';
 
 @Injectable()
 export class CajaRegistrosService {
@@ -257,6 +258,12 @@ export class CajaRegistrosService {
         comentarioFinal: caja.comentarioFinal ?? null,
         depositado: caja.depositado,
         estado: caja.estado, // string
+
+        estadoCuadre: caja.estadoCuadre, // string
+        efectivoContado: parseDecimal(caja.efectivoContado), // string
+        diferenciaCaja: parseDecimal(caja.diferenciaCaja), // string
+        comentarioCuadre: caja.comentarioCuadre, // string
+
         fechaApertura: caja.fechaApertura.toISOString(),
         fechaCierre: caja.fechaCierre
           ? caja.fechaCierre.toISOString()

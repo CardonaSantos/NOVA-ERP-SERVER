@@ -279,70 +279,47 @@ export class StockService {
   async updateStockDates(
     dto: UpdateStockDatesDto,
   ): Promise<StockToEditResponse> {
-    this.logger.log(`DTO recibido:\n${JSON.stringify(dto, null, 2)}`);
-
     const ingreso = new Date(dto.fechaIngreso);
     if (isNaN(ingreso.getTime())) {
       throw new BadRequestException('fechaIngreso inválida');
     }
 
     let venc: Date | null = null;
-    if (dto.fechaVencimiento !== undefined && dto.fechaVencimiento !== null) {
-      const d = new Date(dto.fechaVencimiento);
-      if (isNaN(d.getTime())) {
+    if (dto.fechaVencimiento != null) {
+      const parsed = new Date(dto.fechaVencimiento);
+      if (isNaN(parsed.getTime())) {
         throw new BadRequestException('fechaVencimiento inválida');
       }
-      venc = d;
+      venc = parsed;
     }
 
-    // Regla de negocio simple: si hay vencimiento, debe ser >= ingreso
     if (venc && venc.getTime() < ingreso.getTime()) {
       throw new BadRequestException(
         'La fecha de caducidad no puede ser anterior a la fecha de ingreso',
       );
     }
 
-    if (dto.kind === StockKindEnum.PRODUCTO) {
-      // Verificamos existencia
-      const exists = await this.prisma.stock.findUnique({
+    return this.prisma.$transaction(async (tx) => {
+      const stock = await tx.stock.findUnique({
         where: { id: dto.id },
         select: { id: true },
       });
-      if (!exists) {
+
+      if (!stock) {
         throw new NotFoundException(`No existe Stock con id=${dto.id}`);
       }
 
-      await this.prisma.stock.update({
+      await tx.stock.update({
         where: { id: dto.id },
         data: {
           fechaIngreso: ingreso,
-          fechaVencimiento: venc, // puede ser null
+          fechaVencimiento: venc,
+          cantidad: dto.cantidad,
         },
       });
-    } else if (dto.kind === StockKindEnum.PRESENTACION) {
-      const exists = await this.prisma.stockPresentacion.findUnique({
-        where: { id: dto.id },
-        select: { id: true },
-      });
-      if (!exists) {
-        throw new NotFoundException(
-          `No existe StockPresentacion con id=${dto.id}`,
-        );
-      }
 
-      await this.prisma.stockPresentacion.update({
-        where: { id: dto.id },
-        data: {
-          fechaIngreso: ingreso,
-          fechaVencimiento: venc, // puede ser null
-        },
-      });
-    } else {
-      throw new BadRequestException('kind inválido');
-    }
-
-    // Devolvemos el payload normalizado para refrescar el UI
-    return this.getStockToEdit(dto.id);
+      return this.getStockToEdit(dto.id);
+    });
   }
 
   async deleteOneStock(dto: DeleteStockDto) {

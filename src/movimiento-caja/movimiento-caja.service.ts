@@ -1,16 +1,22 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { UtilidadesService } from 'src/caja/utilidades/utilidades.service';
 import { CajaService } from 'src/caja/caja.service';
+import { UtilitiesService } from 'src/utilities/utilities.service';
 
 @Injectable()
 export class MovimientoCajaService {
   private readonly logger = new Logger(MovimientoCajaService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly utilidades: UtilidadesService,
-    private readonly cajaService: CajaService,
+    private prisma: PrismaService,
+    private utilities: UtilitiesService, // ✔ corregido
+    private cajaService: CajaService,
   ) {}
   /**
    *
@@ -355,30 +361,30 @@ export class MovimientoCajaService {
   //   });
   // }
 
-  // async deleteMovimientoById(movimientoID: number) {
-  //   try {
-  //     if (!movimientoID) {
-  //       throw new BadRequestException('Error al eliminar movimiento');
-  //     }
+  async deleteMovimientoById(movimientoID: number) {
+    try {
+      if (!movimientoID) {
+        throw new BadRequestException('Error al eliminar movimiento');
+      }
 
-  //     const movimientoToDelete = await this.prisma.movimientoCaja.delete({
-  //       where: {
-  //         id: movimientoID,
-  //       },
-  //     });
+      const movimientoToDelete = await this.prisma.movimientoFinanciero.delete({
+        where: {
+          id: movimientoID,
+        },
+      });
 
-  //     if (!movimientoToDelete) {
-  //       throw new NotFoundException(
-  //         'Error al encontrar registro para eliminarg',
-  //       );
-  //     }
-  //     return movimientoToDelete;
-  //   } catch (error) {
-  //     this.logger.error('Error es: ', error);
-  //     if (error instanceof HttpException) throw error;
-  //     throw new BadRequestException('Error inesperado');
-  //   }
-  // }
+      if (!movimientoToDelete) {
+        throw new NotFoundException(
+          'Error al encontrar registro para eliminarg',
+        );
+      }
+      return movimientoToDelete;
+    } catch (error) {
+      this.logger.error('Error es: ', error);
+      if (error instanceof HttpException) throw error;
+      throw new BadRequestException('Error inesperado');
+    }
+  }
 
   /**
    *

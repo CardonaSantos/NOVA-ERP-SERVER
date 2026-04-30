@@ -85,6 +85,9 @@ import { MovimientosModule } from './control-presupuestal/movimientos/movimiento
 import { CentrosCostoModule } from './control-presupuestal/centros-costo/centros-costo.module';
 import { PartidasModule } from './control-presupuestal/partidas/partidas.module';
 import { PeriodosModule } from './control-presupuestal/periodos/periodos.module';
+import { CuentaContableModule } from './contabilidad/cuenta-contable/cuenta-contable.module';
+import { AsientoContableModule } from './contabilidad/asiento-contable/asiento-contable.module';
+import { ReglaContableModule } from './contabilidad/regla-contable/regla-contable.module';
 
 @Module({
   imports: [
@@ -172,6 +175,9 @@ import { PeriodosModule } from './control-presupuestal/periodos/periodos.module'
     CentrosCostoModule,
     PartidasModule,
     PeriodosModule,
+    CuentaContableModule,
+    AsientoContableModule,
+    ReglaContableModule,
   ],
   controllers: [AppController],
   providers: [AppService, CloudinaryProvider, SaldosServiceService],

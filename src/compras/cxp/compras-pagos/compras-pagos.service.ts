@@ -303,7 +303,7 @@ export class ComprasPagosService {
                     })
                   )?.proveedorId ?? undefined,
                 motivo: 'COSTO_ASOCIADO',
-                clasificacionAdmin: 'COSTO_VENTA',
+                // clasificacionAdmin: 'COSTO_VENTA',
                 metodoPago: dto.recepcion.mf!.metodoPago as any,
                 costoVentaTipo: dto.recepcion.mf!.costoVentaTipo as any,
                 monto: dto.recepcion.mf!.monto,
