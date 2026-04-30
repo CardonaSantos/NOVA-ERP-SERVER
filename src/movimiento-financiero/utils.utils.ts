@@ -140,16 +140,30 @@ const MOTIVO_EFFECTS: Record<
     };
   },
 
+  // COMPRA_INSUMOS: ({ monto, metodoPago }) => {
+  //   const canal = mapMetodoPagoToCanal(metodoPago);
+  //   const mov = egreso(monto, canal);
+
+  //   return {
+  //     clasificacion: ClasificacionAdmin.COSTO_VENTA,
+  //     deltaCaja: mov.deltaCaja,
+  //     deltaBanco: mov.deltaBanco,
+  //     necesitaTurno: mov.deltaCaja < 0,
+  //     afectaInventario: true,
+  //     requiereCuentaBancaria: canal === CanalMovimiento.BANCO,
+  //     requiereRegistroCaja: canal === CanalMovimiento.CAJA,
+  //   };
+  // },
   COMPRA_INSUMOS: ({ monto, metodoPago }) => {
     const canal = mapMetodoPagoToCanal(metodoPago);
     const mov = egreso(monto, canal);
 
     return {
-      clasificacion: ClasificacionAdmin.COSTO_VENTA,
+      clasificacion: ClasificacionAdmin.GASTO_OPERATIVO,
       deltaCaja: mov.deltaCaja,
       deltaBanco: mov.deltaBanco,
       necesitaTurno: mov.deltaCaja < 0,
-      afectaInventario: true,
+      afectaInventario: false,
       requiereCuentaBancaria: canal === CanalMovimiento.BANCO,
       requiereRegistroCaja: canal === CanalMovimiento.CAJA,
     };

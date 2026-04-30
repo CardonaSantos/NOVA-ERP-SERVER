@@ -48,15 +48,19 @@ export class MovimientoFinancieroService {
     return this.isTxWrapper(arg) ? arg.tx : arg;
   }
   async crearMovimiento(dto: CrearMovimientoDto, arg?: TxArg) {
-    const tx = this.normalizeTx(arg);
+    try {
+      const tx = this.normalizeTx(arg);
 
-    if (tx) {
-      return this.crearMovimientoCore(dto, tx);
+      if (tx) {
+        return this.crearMovimientoCore(dto, tx);
+      }
+
+      return this.prisma.$transaction(async (innerTx) => {
+        return this.crearMovimientoCore(dto, innerTx);
+      });
+    } catch (error) {
+      this.logger.error(error);
     }
-
-    return this.prisma.$transaction(async (innerTx) => {
-      return this.crearMovimientoCore(dto, innerTx);
-    });
   }
 
   async createMovimiento(dto: CrearMovimientoDto, arg?: TxArg) {
