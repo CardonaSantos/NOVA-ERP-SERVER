@@ -33,6 +33,7 @@ import {
   QueryReporteReglasContables,
   QueryReporteVentas,
 } from '../domain/reports.repository';
+import { ReporteCajaMonetarioQueryDto } from '../dto/get-reports-by-range';
 
 @Controller('excel-reports')
 export class ExcelReportsController {
@@ -74,6 +75,11 @@ export class ExcelReportsController {
     res.end(buffer);
   }
 
+  /**
+   * SACAR REPORTE DE CAJAS UNITARIAS
+   * @param dto
+   * @param res
+   */
   @Post('cajas')
   async reporteCajas(@Body() dto: QueryReportCajas, @Res() res: Response) {
     const buffer = await this.excelReportsService.reportCajas(dto);
@@ -83,6 +89,30 @@ export class ExcelReportsController {
       'Content-Type':
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="reporte_cajas_${Date.now()}.xlsx"`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
+  }
+
+  /**
+   * REPORTE DE CAJAS Y TURNOS POR RANGO
+   * @param dto
+   * @param res
+   */
+  @Post('reports-by-range')
+  async getReportsByRange(
+    @Body() dto: ReporteCajaMonetarioQueryDto,
+    @Res() res: Response,
+  ) {
+    this.logger.log(`dto recibido:\n${JSON.stringify(dto, null, 2)}`);
+
+    const buffer = await this.excelReportsService.getReporteCajaMonetario(dto);
+
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="reporte_cajas_rango_${Date.now()}.xlsx"`,
       'Content-Length': buffer.length,
     });
 

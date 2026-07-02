@@ -19,6 +19,7 @@ import {
 } from '../domain/reports.repository';
 import { QueryReport } from '../dto/query';
 import { QueryReportCajas } from '../dto/query-cajas';
+import { ReporteCajaMonetarioQueryDto } from '../dto/get-reports-by-range';
 
 @Injectable()
 export class ExcelReportsService {
@@ -37,6 +38,10 @@ export class ExcelReportsService {
 
   async reportCajas(query: QueryReportCajas) {
     return await this.reportRepo.reporteCajas(query);
+  }
+
+  async getReporteCajaMonetario(query: ReporteCajaMonetarioQueryDto) {
+    return await this.reportRepo.getReporteCajaMonetario(query);
   }
 
   // CONTABILIDAD
