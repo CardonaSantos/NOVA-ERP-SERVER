@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { QueryReport } from '../dto/query';
 import { QueryReportCajas } from '../dto/query-cajas';
+import { ReporteCajaMonetarioQueryDto } from '../dto/get-reports-by-range';
 
 // OTROS========================
 
@@ -78,6 +79,8 @@ export interface ReportRepository {
   ventasUtilidadReport(query: QueryReport): Promise<Buffer>;
 
   ventasHistorial(query: QueryReport): Promise<Buffer>;
+
+  getReporteCajaMonetario(query: ReporteCajaMonetarioQueryDto);
 
   reporteCajas(query: QueryReportCajas): Promise<Buffer>;
 
